@@ -36,13 +36,13 @@ export default function ResultsPanel({ results }) {
       <div className="result-cards">
         <div className="result-card primary">
           <div className="card-label">&phi;M<sub>n</sub> (Design Strength)</div>
-          <div className="card-value">{phiMn.toFixed(1)} kip-in</div>
-          <div className="card-sub">{phiMnFt.toFixed(1)} kip-ft</div>
+          <div className="card-value">{phiMnFt.toFixed(1)} kip-ft</div>
+          <div className="card-sub">{phiMn.toFixed(1)} kip-in</div>
         </div>
         <div className="result-card">
           <div className="card-label">M<sub>n</sub> (Nominal Strength)</div>
-          <div className="card-value">{Mn.toFixed(1)} kip-in</div>
-          <div className="card-sub">{MnFt.toFixed(1)} kip-ft</div>
+          <div className="card-value">{MnFt.toFixed(1)} kip-ft</div>
+          <div className="card-sub">{Mn.toFixed(1)} kip-in</div>
         </div>
         <div className="result-card">
           <div className="card-label">&phi; Factor</div>

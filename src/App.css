@@ -201,10 +201,12 @@
   color: var(--slate-600);
   flex: 1;
   min-width: 120px;
+  white-space: nowrap;
 }
 
 .form-row label sub {
   font-size: 0.7em;
+  white-space: nowrap;
 }
 
 .form-row input,
