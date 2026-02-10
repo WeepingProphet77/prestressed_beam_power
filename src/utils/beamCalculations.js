@@ -97,7 +97,7 @@ export function steelStrain(di, c, fse, Es) {
 // ─── Section analysis (rectangular / T-beam) ────────────────────────────────
 
 /**
- * Compute the concrete compression force for a rectangular or T-section.
+ * Compute the concrete compression force for a rectangular, T-section, or sandwich section.
  *
  * For a T-beam:
  *   If a ≤ hf (stress block within the flange):
@@ -105,9 +105,30 @@ export function steelStrain(di, c, fse, Es) {
  *   If a > hf (stress block extends into the web):
  *     Cc = 0.85 · f'c · [hf · bf + (a − hf) · bw]
  *
+ * For a sandwich section:
+ *   If a ≤ ht (stress block within the top rectangle):
+ *     Cc = 0.85 · f'c · a · bt
+ *   If ht < a ≤ ht+hg (stress block in top rectangle only, gap has no concrete):
+ *     Cc = 0.85 · f'c · ht · bt
+ *   If a > ht+hg (stress block extends into bottom rectangle):
+ *     Cc = 0.85 · f'c · [ht · bt + (a − ht − hg) · bb]
+ *
  * For a rectangular beam, bf = bw and hf = h, so it reduces to Cc = 0.85·f'c·a·b.
  */
-export function concreteCompression(fc, a, bf, bw, hf) {
+export function concreteCompression(fc, a, bf, bw, hf, section = null) {
+  // Handle sandwich section if section object is provided
+  if (section && section.sectionType === 'sandwich') {
+    const { bt, ht, hg, bb } = section;
+    if (a <= ht) {
+      return 0.85 * fc * a * bt;
+    } else if (a <= ht + hg) {
+      return 0.85 * fc * ht * bt;
+    } else {
+      return 0.85 * fc * (ht * bt + (a - ht - hg) * bb);
+    }
+  }
+
+  // Handle T-beam and rectangular sections
   if (a <= hf) {
     return 0.85 * fc * a * bf;
   }
@@ -116,8 +137,29 @@ export function concreteCompression(fc, a, bf, bw, hf) {
 
 /**
  * Centroid of the compression block from the extreme compression fiber.
+ *
+ * For sandwich sections:
+ *   If a ≤ ht: centroid = a / 2
+ *   If ht < a ≤ ht+hg: centroid = ht / 2 (only top rectangle contributes)
+ *   If a > ht+hg: weighted centroid of top and bottom rectangles
  */
-export function compressionCentroid(a, bf, bw, hf) {
+export function compressionCentroid(a, bf, bw, hf, section = null) {
+  // Handle sandwich section if section object is provided
+  if (section && section.sectionType === 'sandwich') {
+    const { bt, ht, hg, bb } = section;
+    if (a <= ht) {
+      return a / 2;
+    } else if (a <= ht + hg) {
+      return ht / 2;
+    } else {
+      const topArea = ht * bt;
+      const botArea = (a - ht - hg) * bb;
+      const totalArea = topArea + botArea;
+      return (topArea * ht / 2 + botArea * (ht + hg + (a - ht - hg) / 2)) / totalArea;
+    }
+  }
+
+  // Handle T-beam and rectangular sections
   if (a <= hf) {
     return a / 2;
   }
@@ -158,7 +200,7 @@ export function analyzeBeam(section, steelLayers) {
     const a = b1 * c;
 
     // Concrete compression
-    const Cc = concreteCompression(fc, a, bf, bw, hf);
+    const Cc = concreteCompression(fc, a, bf, bw, hf, section);
 
     // Steel forces (positive = tension)
     let totalSteelForce = 0;
@@ -184,8 +226,8 @@ export function analyzeBeam(section, steelLayers) {
 
   // Final results with converged c
   const a = b1 * c;
-  const Cc = concreteCompression(fc, a, bf, bw, hf);
-  const ccCentroid = compressionCentroid(a, bf, bw, hf);
+  const Cc = concreteCompression(fc, a, bf, bw, hf, section);
+  const ccCentroid = compressionCentroid(a, bf, bw, hf, section);
 
   // Compute per-layer results
   const layerResults = steelLayers.map((layer) => {
