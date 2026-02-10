@@ -193,30 +193,41 @@
 }
 
 .form-row label {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   gap: 0.2rem;
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--slate-600);
-  flex: 1;
-  min-width: 120px;
-  white-space: nowrap;
+  flex: 1 1 0;
+  min-width: 150px;
+  max-width: 200px;
 }
 
-.form-row label sub {
+.form-row label sub,
+.form-row label sup {
   font-size: 0.7em;
+  display: inline;
+  line-height: 1;
+  vertical-align: baseline;
+}
+
+.label-text {
   white-space: nowrap;
+  display: inline-block;
+  margin-bottom: 0.2rem;
 }
 
 .form-row input,
 .form-row select {
+  width: 100%;
   padding: 0.4rem 0.55rem;
   border: 1.5px solid var(--slate-300);
   border-radius: var(--radius-sm);
   background: var(--slate-50);
   color: var(--slate-800);
   transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .form-row input:focus,
