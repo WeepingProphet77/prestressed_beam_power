@@ -8,6 +8,12 @@ const DEFAULT_SECTION = {
   hf: 0,
   h: 24,
   fc: 6,
+  // Sandwich shape parameters
+  bt: 16,  // top rectangle width
+  ht: 8,   // top rectangle height
+  hg: 4,   // gap height
+  bb: 16,  // bottom rectangle width
+  hb: 8,   // bottom rectangle height
 };
 
 const DEFAULT_LAYER = {
@@ -29,10 +35,21 @@ export default function BeamInputForm({ onCalculate }) {
       if (value === 'rectangular') {
         updated.bf = updated.bw;
         updated.hf = 0;
-      } else {
+      } else if (value === 'tbeam') {
         updated.hf = updated.hf || 6;
         updated.bf = updated.bf || updated.bw + 12;
+      } else if (value === 'sandwich') {
+        updated.bt = updated.bt || 16;
+        updated.ht = updated.ht || 8;
+        updated.hg = updated.hg || 4;
+        updated.bb = updated.bb || 16;
+        updated.hb = updated.hb || 8;
+        updated.h = updated.ht + updated.hg + updated.hb;
       }
+    }
+    // Update total height for sandwich when individual heights change
+    if (updated.sectionType === 'sandwich' && ['ht', 'hg', 'hb'].includes(field)) {
+      updated.h = parseFloat(updated.ht) + parseFloat(updated.hg) + parseFloat(updated.hb);
     }
     if (field === 'bw' && updated.sectionType === 'rectangular') {
       updated.bf = updated.bw;
@@ -74,6 +91,12 @@ export default function BeamInputForm({ onCalculate }) {
       hf: section.sectionType === 'rectangular' ? parseFloat(section.h) : parseFloat(section.hf),
       h: parseFloat(section.h),
       fc: parseFloat(section.fc),
+      // Sandwich parameters
+      bt: parseFloat(section.bt),
+      ht: parseFloat(section.ht),
+      hg: parseFloat(section.hg),
+      bb: parseFloat(section.bb),
+      hb: parseFloat(section.hb),
     };
     const finalLayers = layers.map((l) => {
       const preset = steelPresets.find((p) => p.id === l.steelPresetId);
@@ -106,6 +129,7 @@ export default function BeamInputForm({ onCalculate }) {
             >
               <option value="rectangular">Rectangular</option>
               <option value="tbeam">T-Beam</option>
+              <option value="sandwich">Sandwich</option>
             </select>
           </label>
         </div>
@@ -123,16 +147,18 @@ export default function BeamInputForm({ onCalculate }) {
               />
             </label>
           )}
-          <label>
-            <span className="label-text">{section.sectionType === 'tbeam' ? 'Web' : 'Beam'} Width, b<sub>w</sub> (in)</span>
-            <input
-              type="number"
-              step="0.1"
-              min="0.1"
-              value={section.bw}
-              onChange={(e) => handleSectionChange('bw', parseFloat(e.target.value))}
-            />
-          </label>
+          {section.sectionType !== 'sandwich' && (
+            <label>
+              <span className="label-text">{section.sectionType === 'tbeam' ? 'Web' : 'Beam'} Width, b<sub>w</sub> (in)</span>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={section.bw}
+                onChange={(e) => handleSectionChange('bw', parseFloat(e.target.value))}
+              />
+            </label>
+          )}
           {section.sectionType === 'tbeam' && (
             <label>
               <span className="label-text">Flange Depth, h<sub>f</sub> (in)</span>
@@ -145,17 +171,84 @@ export default function BeamInputForm({ onCalculate }) {
               />
             </label>
           )}
-          <label>
-            <span className="label-text">Total Depth, h (in)</span>
-            <input
-              type="number"
-              step="0.1"
-              min="0.1"
-              value={section.h}
-              onChange={(e) => handleSectionChange('h', e.target.value)}
-            />
-          </label>
+          {section.sectionType === 'sandwich' && (
+            <>
+              <label>
+                <span className="label-text">Top Width, b<sub>t</sub> (in)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={section.bt}
+                  onChange={(e) => handleSectionChange('bt', e.target.value)}
+                />
+              </label>
+              <label>
+                <span className="label-text">Top Height, h<sub>t</sub> (in)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={section.ht}
+                  onChange={(e) => handleSectionChange('ht', e.target.value)}
+                />
+              </label>
+            </>
+          )}
+          {section.sectionType !== 'sandwich' && (
+            <label>
+              <span className="label-text">Total Depth, h (in)</span>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={section.h}
+                onChange={(e) => handleSectionChange('h', e.target.value)}
+              />
+            </label>
+          )}
         </div>
+
+        {section.sectionType === 'sandwich' && (
+          <div className="form-row">
+            <label>
+              <span className="label-text">Gap Height, h<sub>g</sub> (in)</span>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={section.hg}
+                onChange={(e) => handleSectionChange('hg', e.target.value)}
+              />
+            </label>
+            <label>
+              <span className="label-text">Bottom Width, b<sub>b</sub> (in)</span>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={section.bb}
+                onChange={(e) => handleSectionChange('bb', e.target.value)}
+              />
+            </label>
+            <label>
+              <span className="label-text">Bottom Height, h<sub>b</sub> (in)</span>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={section.hb}
+                onChange={(e) => handleSectionChange('hb', e.target.value)}
+              />
+            </label>
+            <label className="computed">
+              <span className="label-text">Total Depth, h (in)</span>
+              <span className="computed-value">
+                {section.h.toFixed(1)}
+              </span>
+            </label>
+          </div>
+        )}
 
         <div className="form-row">
           <label>

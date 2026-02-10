@@ -5,7 +5,7 @@
 export default function BeamDiagram({ section, results }) {
   if (!section || !results) return null;
 
-  const { bf, bw, hf, h, sectionType } = section;
+  const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb } = section;
   const { c, a, layerResults } = results;
 
   // Drawing scale
@@ -13,10 +13,12 @@ export default function BeamDiagram({ section, results }) {
   const maxDrawWidth = 300;
   const maxDrawHeight = 400;
 
-  const maxDim = Math.max(bf || bw, h);
-  const scale = Math.min(maxDrawWidth / (bf || bw), maxDrawHeight / h);
+  const isSandwich = sectionType === 'sandwich';
+  const maxWidth = isSandwich ? Math.max(bt, bb) : (bf || bw);
+  const maxDim = Math.max(maxWidth, h);
+  const scale = Math.min(maxDrawWidth / maxWidth, maxDrawHeight / h);
 
-  const drawW = (bf || bw) * scale;
+  const drawW = maxWidth * scale;
   const drawH = h * scale;
   const svgW = drawW + padding * 2 + 180;
   const svgH = drawH + padding * 2;
@@ -28,7 +30,29 @@ export default function BeamDiagram({ section, results }) {
 
   // Build beam outline path
   let outlinePath;
-  if (isT) {
+  if (isSandwich) {
+    const topW = bt * scale;
+    const topH = ht * scale;
+    const gapH = hg * scale;
+    const botW = bb * scale;
+    const botH = hb * scale;
+    const topOffset = (drawW - topW) / 2;
+    const botOffset = (drawW - botW) / 2;
+
+    // Two separate rectangles
+    outlinePath = `
+      M ${ox + topOffset} ${oy}
+      L ${ox + topOffset + topW} ${oy}
+      L ${ox + topOffset + topW} ${oy + topH}
+      L ${ox + topOffset} ${oy + topH}
+      Z
+      M ${ox + botOffset} ${oy + topH + gapH}
+      L ${ox + botOffset + botW} ${oy + topH + gapH}
+      L ${ox + botOffset + botW} ${oy + topH + gapH + botH}
+      L ${ox + botOffset} ${oy + topH + gapH + botH}
+      Z
+    `;
+  } else if (isT) {
     const flangeW = bf * scale;
     const webW = bw * scale;
     const flangeH = hf * scale;
@@ -59,7 +83,49 @@ export default function BeamDiagram({ section, results }) {
   // Stress block
   const aH = a * scale;
   let stressBlockPath;
-  if (isT) {
+  if (isSandwich) {
+    const topW = bt * scale;
+    const topH = ht * scale;
+    const gapH = hg * scale;
+    const botW = bb * scale;
+    const topOffset = (drawW - topW) / 2;
+    const botOffset = (drawW - botW) / 2;
+
+    if (aH <= topH) {
+      // Stress block only in top rectangle
+      stressBlockPath = `
+        M ${ox + topOffset} ${oy}
+        L ${ox + topOffset + topW} ${oy}
+        L ${ox + topOffset + topW} ${oy + aH}
+        L ${ox + topOffset} ${oy + aH}
+        Z
+      `;
+    } else if (aH <= topH + gapH) {
+      // Stress block only in top rectangle (gap has no concrete)
+      stressBlockPath = `
+        M ${ox + topOffset} ${oy}
+        L ${ox + topOffset + topW} ${oy}
+        L ${ox + topOffset + topW} ${oy + topH}
+        L ${ox + topOffset} ${oy + topH}
+        Z
+      `;
+    } else {
+      // Stress block in top rectangle and part of bottom rectangle
+      const botStressH = aH - topH - gapH;
+      stressBlockPath = `
+        M ${ox + topOffset} ${oy}
+        L ${ox + topOffset + topW} ${oy}
+        L ${ox + topOffset + topW} ${oy + topH}
+        L ${ox + topOffset} ${oy + topH}
+        Z
+        M ${ox + botOffset} ${oy + topH + gapH}
+        L ${ox + botOffset + botW} ${oy + topH + gapH}
+        L ${ox + botOffset + botW} ${oy + topH + gapH + botStressH}
+        L ${ox + botOffset} ${oy + topH + gapH + botStressH}
+        Z
+      `;
+    }
+  } else if (isT) {
     const flangeW = bf * scale;
     const webW = bw * scale;
     const flangeH = hf * scale;
@@ -98,8 +164,8 @@ export default function BeamDiagram({ section, results }) {
 
   // Neutral axis y position
   const naY = oy + c * scale;
-  const beamCenterX = isT ? ox + (bf * scale) / 2 : ox + drawW / 2;
-  const beamRightX = isT ? ox + bf * scale : ox + drawW;
+  const beamCenterX = isSandwich ? ox + drawW / 2 : (isT ? ox + (bf * scale) / 2 : ox + drawW / 2);
+  const beamRightX = isSandwich ? ox + drawW : (isT ? ox + bf * scale : ox + drawW);
 
   // Annotation x
   const annotX = beamRightX + 12;
