@@ -5,7 +5,7 @@
 export default function BeamDiagram({ section, results }) {
   if (!section || !results) return null;
 
-  const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb } = section;
+  const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb, numStems, stemWidth, numVoids, voidDiameter } = section;
   const { c, a, layerResults } = results;
 
   // Drawing scale
@@ -14,6 +14,8 @@ export default function BeamDiagram({ section, results }) {
   const maxDrawHeight = 400;
 
   const isSandwich = sectionType === 'sandwich';
+  const isDoubleTee = sectionType === 'doubletee';
+  const isHollowCore = sectionType === 'hollowcore';
   const maxWidth = isSandwich ? Math.max(bt, bb) : (bf || bw);
   const maxDim = Math.max(maxWidth, h);
   const scale = Math.min(maxDrawWidth / maxWidth, maxDrawHeight / h);
@@ -52,6 +54,68 @@ export default function BeamDiagram({ section, results }) {
       L ${ox + botOffset} ${oy + topH + gapH + botH}
       Z
     `;
+  } else if (isDoubleTee) {
+    // Double tee: flange on top with two stems below
+    const flangeW = bf * scale;
+    const flangeH = hf * scale;
+    const stemW = stemWidth * scale;
+    const webH = (h - hf) * scale;
+    const nStems = numStems || 2;
+    const spacing = flangeW / (nStems + 1);
+
+    // Draw flange
+    outlinePath = `
+      M ${ox} ${oy}
+      L ${ox + flangeW} ${oy}
+      L ${ox + flangeW} ${oy + flangeH}
+    `;
+
+    // Draw stems from right to left
+    for (let i = nStems - 1; i >= 0; i--) {
+      const stemCenterX = spacing * (i + 1);
+      const stemLeft = stemCenterX - stemW / 2;
+      const stemRight = stemCenterX + stemW / 2;
+
+      if (i === nStems - 1) {
+        outlinePath += `L ${ox + stemRight} ${oy + flangeH}`;
+      }
+      outlinePath += `
+        L ${ox + stemRight} ${oy + flangeH + webH}
+        L ${ox + stemLeft} ${oy + flangeH + webH}
+        L ${ox + stemLeft} ${oy + flangeH}
+      `;
+      if (i > 0) {
+        const nextStemCenterX = spacing * i;
+        const nextStemRight = nextStemCenterX + stemW / 2;
+        outlinePath += `L ${ox + nextStemRight} ${oy + flangeH}`;
+      }
+    }
+
+    outlinePath += `L ${ox} ${oy + flangeH} Z`;
+  } else if (isHollowCore) {
+    // Hollow core: rectangular with circular voids
+    outlinePath = `
+      M ${ox} ${oy}
+      L ${ox + drawW} ${oy}
+      L ${ox + drawW} ${oy + drawH}
+      L ${ox} ${oy + drawH}
+      Z
+    `;
+
+    // Add void circles as separate paths (will be filled with background color)
+    const voidR = (voidDiameter * scale) / 2;
+    const voidCenterY = oy + (h / 2) * scale;
+    const voidSpacing = drawW / (numVoids + 1);
+
+    for (let i = 0; i < numVoids; i++) {
+      const voidCenterX = ox + voidSpacing * (i + 1);
+      outlinePath += `
+        M ${voidCenterX + voidR} ${voidCenterY}
+        A ${voidR} ${voidR} 0 1 0 ${voidCenterX - voidR} ${voidCenterY}
+        A ${voidR} ${voidR} 0 1 0 ${voidCenterX + voidR} ${voidCenterY}
+        Z
+      `;
+    }
   } else if (isT) {
     const flangeW = bf * scale;
     const webW = bw * scale;
@@ -125,6 +189,77 @@ export default function BeamDiagram({ section, results }) {
         Z
       `;
     }
+  } else if (isDoubleTee) {
+    const flangeW = bf * scale;
+    const flangeH = hf * scale;
+    const stemW = stemWidth * scale;
+    const nStems = numStems || 2;
+    const spacing = flangeW / (nStems + 1);
+
+    if (aH <= flangeH) {
+      // Stress block only in flange
+      stressBlockPath = `
+        M ${ox} ${oy}
+        L ${ox + flangeW} ${oy}
+        L ${ox + flangeW} ${oy + aH}
+        L ${ox} ${oy + aH}
+        Z
+      `;
+    } else {
+      // Stress block in flange and stems
+      stressBlockPath = `
+        M ${ox} ${oy}
+        L ${ox + flangeW} ${oy}
+        L ${ox + flangeW} ${oy + flangeH}
+      `;
+
+      for (let i = nStems - 1; i >= 0; i--) {
+        const stemCenterX = spacing * (i + 1);
+        const stemLeft = stemCenterX - stemW / 2;
+        const stemRight = stemCenterX + stemW / 2;
+
+        if (i === nStems - 1) {
+          stressBlockPath += `L ${ox + stemRight} ${oy + flangeH}`;
+        }
+        stressBlockPath += `
+          L ${ox + stemRight} ${oy + aH}
+          L ${ox + stemLeft} ${oy + aH}
+          L ${ox + stemLeft} ${oy + flangeH}
+        `;
+        if (i > 0) {
+          const nextStemCenterX = spacing * i;
+          const nextStemRight = nextStemCenterX + stemW / 2;
+          stressBlockPath += `L ${ox + nextStemRight} ${oy + flangeH}`;
+        }
+      }
+
+      stressBlockPath += `L ${ox} ${oy + flangeH} Z`;
+    }
+  } else if (isHollowCore) {
+    // Stress block for hollow core (simplified as rectangular)
+    stressBlockPath = `
+      M ${ox} ${oy}
+      L ${ox + drawW} ${oy}
+      L ${ox + drawW} ${oy + aH}
+      L ${ox} ${oy + aH}
+      Z
+    `;
+    // Subtract voids from stress block if they intersect
+    const voidR = (voidDiameter * scale) / 2;
+    const voidCenterY = oy + (h / 2) * scale;
+    const voidSpacing = drawW / (numVoids + 1);
+
+    if (aH > voidCenterY - voidR) {
+      for (let i = 0; i < numVoids; i++) {
+        const voidCenterX = ox + voidSpacing * (i + 1);
+        stressBlockPath += `
+          M ${voidCenterX + voidR} ${voidCenterY}
+          A ${voidR} ${voidR} 0 1 0 ${voidCenterX - voidR} ${voidCenterY}
+          A ${voidR} ${voidR} 0 1 0 ${voidCenterX + voidR} ${voidCenterY}
+          Z
+        `;
+      }
+    }
   } else if (isT) {
     const flangeW = bf * scale;
     const webW = bw * scale;
@@ -164,8 +299,10 @@ export default function BeamDiagram({ section, results }) {
 
   // Neutral axis y position
   const naY = oy + c * scale;
-  const beamCenterX = isSandwich ? ox + drawW / 2 : (isT ? ox + (bf * scale) / 2 : ox + drawW / 2);
-  const beamRightX = isSandwich ? ox + drawW : (isT ? ox + bf * scale : ox + drawW);
+  const beamCenterX = isSandwich ? ox + drawW / 2 :
+                      (isT || isDoubleTee ? ox + (bf * scale) / 2 : ox + drawW / 2);
+  const beamRightX = isSandwich ? ox + drawW :
+                     (isT || isDoubleTee ? ox + bf * scale : ox + drawW);
 
   // Annotation x
   const annotX = beamRightX + 12;
