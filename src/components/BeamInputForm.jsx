@@ -244,8 +244,8 @@ export default function BeamInputForm({ onCalculate }) {
                   A<sub>s</sub> (in&sup2;)
                   <input
                     type="number"
-                    step="0.01"
-                    min="0.01"
+                    step="0.001"
+                    min="0.001"
                     value={layer.area}
                     onChange={(e) => handleLayerChange(layer.id, 'area', e.target.value)}
                   />
