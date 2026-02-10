@@ -59,39 +59,45 @@ export default function App() {
       <header className="app-header">
         <div className="header-content">
           <div className="header-badge">ACI 318</div>
-          <h1>Prestressed Concrete Beam Calculator</h1>
-          <p className="subtitle">
-            Flexural strength analysis using the Devalapura-Tadros / PCI power formula
-            for steel stress-strain behavior
-          </p>
+          <div className="header-text">
+            <h1>Prestressed Concrete Beam Calculator</h1>
+            <p className="subtitle">
+              Flexural strength analysis using the Devalapura-Tadros / PCI power formula
+            </p>
+          </div>
         </div>
       </header>
 
-      <main className="app-main">
+      <main className={`app-main${results ? ' has-results' : ''}`}>
         <div className="input-column">
           <BeamInputForm onCalculate={handleCalculate} />
         </div>
 
-        {error && (
-          <div className="error-banner">
-            <span className="error-icon">!</span>
-            <div>
-              <strong>Calculation Error</strong>
-              <p>{error}</p>
+        <div className="output-column">
+          {error && (
+            <div className="error-banner">
+              <span className="error-icon">!</span>
+              <div>
+                <strong>Calculation Error</strong>
+                <p>{error}</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {results && (
+            <div className="results-column" ref={resultsRef}>
+              <ResultsPanel results={results} />
+            </div>
+          )}
+        </div>
 
         {results && (
-          <div className="results-column" ref={resultsRef}>
-            <ResultsPanel results={results} />
-
+          <div className="diagrams-section">
             <div className="diagrams-row">
               <BeamDiagram section={section} results={results} />
               <StrainDiagram results={results} />
+              <StressStrainChart results={results} />
             </div>
-
-            <StressStrainChart results={results} />
           </div>
         )}
       </main>
