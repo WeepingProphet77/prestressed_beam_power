@@ -97,7 +97,8 @@ export function steelStrain(di, c, fse, Es) {
 // ─── Section analysis (rectangular / T-beam) ────────────────────────────────
 
 /**
- * Compute the concrete compression force for a rectangular, T-section, or sandwich section.
+ * Compute the concrete compression force for a rectangular, T-section, sandwich section,
+ * double tee, or hollow core section.
  *
  * For a T-beam:
  *   If a ≤ hf (stress block within the flange):
@@ -112,6 +113,16 @@ export function steelStrain(di, c, fse, Es) {
  *     Cc = 0.85 · f'c · ht · bt
  *   If a > ht+hg (stress block extends into bottom rectangle):
  *     Cc = 0.85 · f'c · [ht · bt + (a − ht − hg) · bb]
+ *
+ * For a double tee:
+ *   If a ≤ hf (stress block within the flange):
+ *     Cc = 0.85 · f'c · a · bf
+ *   If a > hf (stress block extends into stems):
+ *     Cc = 0.85 · f'c · [hf · bf + (a − hf) · numStems · stemWidth]
+ *
+ * For a hollow core:
+ *   Calculate solid area minus void area at depth a
+ *   Voids are circular with diameter voidDiameter
  *
  * For a rectangular beam, bf = bw and hf = h, so it reduces to Cc = 0.85·f'c·a·b.
  */
@@ -128,6 +139,50 @@ export function concreteCompression(fc, a, bf, bw, hf, section = null) {
     }
   }
 
+  // Handle double tee section
+  if (section && section.sectionType === 'doubletee') {
+    const { numStems = 2, stemWidth } = section;
+    if (a <= hf) {
+      return 0.85 * fc * a * bf;
+    }
+    return 0.85 * fc * (hf * bf + (a - hf) * numStems * stemWidth);
+  }
+
+  // Handle hollow core section
+  if (section && section.sectionType === 'hollowcore') {
+    const { numVoids, voidDiameter, voidCenterDepth } = section;
+    const grossArea = bf * a;
+
+    // Calculate void area within stress block depth a
+    let voidArea = 0;
+    if (a > voidCenterDepth - voidDiameter / 2 && voidCenterDepth > 0) {
+      // Voids intersect with stress block
+      for (let i = 0; i < numVoids; i++) {
+        const voidTop = voidCenterDepth - voidDiameter / 2;
+        const voidBottom = voidCenterDepth + voidDiameter / 2;
+
+        if (a <= voidTop) {
+          // Stress block doesn't reach void
+          continue;
+        } else if (a >= voidBottom) {
+          // Full void circle is within stress block
+          voidArea += Math.PI * Math.pow(voidDiameter / 2, 2);
+        } else {
+          // Partial void intersection (circular segment)
+          const r = voidDiameter / 2;
+          const h = a - voidTop;
+          // Use circular segment area formula
+          const theta = 2 * Math.acos((r - h) / r);
+          const segmentArea = (r * r / 2) * (theta - Math.sin(theta));
+          voidArea += segmentArea;
+        }
+      }
+    }
+
+    const netArea = grossArea - voidArea;
+    return 0.85 * fc * netArea;
+  }
+
   // Handle T-beam and rectangular sections
   if (a <= hf) {
     return 0.85 * fc * a * bf;
@@ -142,6 +197,12 @@ export function concreteCompression(fc, a, bf, bw, hf, section = null) {
  *   If a ≤ ht: centroid = a / 2
  *   If ht < a ≤ ht+hg: centroid = ht / 2 (only top rectangle contributes)
  *   If a > ht+hg: weighted centroid of top and bottom rectangles
+ *
+ * For double tee:
+ *   Similar to T-beam but with multiple stems
+ *
+ * For hollow core:
+ *   Approximated as gross section centroid minus void contribution
  */
 export function compressionCentroid(a, bf, bw, hf, section = null) {
   // Handle sandwich section if section object is provided
@@ -157,6 +218,60 @@ export function compressionCentroid(a, bf, bw, hf, section = null) {
       const totalArea = topArea + botArea;
       return (topArea * ht / 2 + botArea * (ht + hg + (a - ht - hg) / 2)) / totalArea;
     }
+  }
+
+  // Handle double tee section
+  if (section && section.sectionType === 'doubletee') {
+    const { numStems = 2, stemWidth } = section;
+    if (a <= hf) {
+      return a / 2;
+    }
+    const flangeArea = hf * bf;
+    const stemArea = (a - hf) * numStems * stemWidth;
+    const totalArea = flangeArea + stemArea;
+    return (flangeArea * hf / 2 + stemArea * (hf + (a - hf) / 2)) / totalArea;
+  }
+
+  // Handle hollow core section
+  if (section && section.sectionType === 'hollowcore') {
+    const { numVoids, voidDiameter, voidCenterDepth } = section;
+    const grossArea = bf * a;
+    const grossCentroid = a / 2;
+
+    // Calculate void contribution
+    let voidMoment = 0;
+    let voidArea = 0;
+
+    if (a > voidCenterDepth - voidDiameter / 2 && voidCenterDepth > 0) {
+      for (let i = 0; i < numVoids; i++) {
+        const voidTop = voidCenterDepth - voidDiameter / 2;
+        const voidBottom = voidCenterDepth + voidDiameter / 2;
+
+        if (a <= voidTop) {
+          continue;
+        } else if (a >= voidBottom) {
+          // Full void circle
+          const area = Math.PI * Math.pow(voidDiameter / 2, 2);
+          voidArea += area;
+          voidMoment += area * voidCenterDepth;
+        } else {
+          // Partial void intersection
+          const r = voidDiameter / 2;
+          const h = a - voidTop;
+          const theta = 2 * Math.acos((r - h) / r);
+          const segmentArea = (r * r / 2) * (theta - Math.sin(theta));
+          // Centroid of circular segment from chord
+          const yBar = (4 * r * Math.pow(Math.sin(theta / 2), 3)) / (3 * (theta - Math.sin(theta)));
+          const segmentCentroid = voidTop + yBar;
+          voidArea += segmentArea;
+          voidMoment += segmentArea * segmentCentroid;
+        }
+      }
+    }
+
+    const netArea = grossArea - voidArea;
+    if (netArea <= 0) return grossCentroid;
+    return (grossArea * grossCentroid - voidMoment) / netArea;
   }
 
   // Handle T-beam and rectangular sections
