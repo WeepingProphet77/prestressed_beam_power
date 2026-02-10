@@ -99,7 +99,7 @@ export default function BeamInputForm({ onCalculate }) {
 
         <div className="form-row">
           <label>
-            Section Type
+            <span className="label-text">Section Type</span>
             <select
               value={section.sectionType}
               onChange={(e) => handleSectionChange('sectionType', e.target.value)}
@@ -113,7 +113,7 @@ export default function BeamInputForm({ onCalculate }) {
         <div className="form-row">
           {section.sectionType === 'tbeam' && (
             <label>
-              Flange Width, b<sub>f</sub> (in)
+              <span className="label-text">Flange Width, b<sub>f</sub> (in)</span>
               <input
                 type="number"
                 step="0.1"
@@ -124,7 +124,7 @@ export default function BeamInputForm({ onCalculate }) {
             </label>
           )}
           <label>
-            {section.sectionType === 'tbeam' ? 'Web' : 'Beam'} Width, b<sub>w</sub> (in)
+            <span className="label-text">{section.sectionType === 'tbeam' ? 'Web' : 'Beam'} Width, b<sub>w</sub> (in)</span>
             <input
               type="number"
               step="0.1"
@@ -135,7 +135,7 @@ export default function BeamInputForm({ onCalculate }) {
           </label>
           {section.sectionType === 'tbeam' && (
             <label>
-              Flange Depth, h<sub>f</sub> (in)
+              <span className="label-text">Flange Depth, h<sub>f</sub> (in)</span>
               <input
                 type="number"
                 step="0.1"
@@ -146,7 +146,7 @@ export default function BeamInputForm({ onCalculate }) {
             </label>
           )}
           <label>
-            Total Depth, h (in)
+            <span className="label-text">Total Depth, h (in)</span>
             <input
               type="number"
               step="0.1"
@@ -159,7 +159,7 @@ export default function BeamInputForm({ onCalculate }) {
 
         <div className="form-row">
           <label>
-            f'<sub>c</sub> (ksi)
+            <span className="label-text">f'<sub>c</sub> (ksi)</span>
             <input
               type="number"
               step="0.5"
@@ -170,7 +170,7 @@ export default function BeamInputForm({ onCalculate }) {
             />
           </label>
           <label className="computed">
-            &beta;<sub>1</sub>
+            <span className="label-text">&beta;<sub>1</sub></span>
             <span className="computed-value">
               {section.fc <= 4
                 ? '0.850'
@@ -191,7 +191,7 @@ export default function BeamInputForm({ onCalculate }) {
 
         <div className="layers-info">
           Depth is measured from the extreme compression fiber.
-          For prestressing steel, enter the effective prestress (f<sub>se</sub>) after all losses.
+          For prestressing steel, enter the effective prestress <span style={{whiteSpace: 'nowrap'}}>(f<sub>se</sub>)</span> after all losses.
         </div>
 
         {layers.map((layer, idx) => {
@@ -215,7 +215,7 @@ export default function BeamInputForm({ onCalculate }) {
               </div>
               <div className="form-row">
                 <label>
-                  Steel Type
+                  <span className="label-text">Steel Type</span>
                   <select
                     value={layer.steelPresetId}
                     onChange={(e) => handleLayerChange(layer.id, 'steelPresetId', e.target.value)}
@@ -241,7 +241,7 @@ export default function BeamInputForm({ onCalculate }) {
                   </select>
                 </label>
                 <label>
-                  A<sub>s</sub> (in&sup2;)
+                  <span className="label-text">A<sub>s</sub> (in&sup2;)</span>
                   <input
                     type="number"
                     step="0.001"
@@ -253,7 +253,7 @@ export default function BeamInputForm({ onCalculate }) {
               </div>
               <div className="form-row">
                 <label>
-                  Depth, d (in)
+                  <span className="label-text">Depth, d (in)</span>
                   <input
                     type="number"
                     step="0.1"
@@ -263,7 +263,7 @@ export default function BeamInputForm({ onCalculate }) {
                   />
                 </label>
                 <label className={isMild ? 'disabled-field' : ''}>
-                  f<sub>se</sub> (ksi)
+                  <span className="label-text">f<sub>se</sub> (ksi)</span>
                   <input
                     type="number"
                     step="1"
@@ -276,12 +276,12 @@ export default function BeamInputForm({ onCalculate }) {
                 </label>
               </div>
               <div className="preset-info">
-                <span>E<sub>s</sub>={preset?.Es?.toLocaleString()} ksi</span>
-                <span>f<sub>py</sub>={preset?.fpy} ksi</span>
-                <span>f<sub>pu</sub>={preset?.fpu} ksi</span>
-                <span>Q={preset?.Q}</span>
-                <span>R={preset?.R}</span>
-                <span>K={preset?.K}</span>
+                <span style={{whiteSpace: 'nowrap'}}>E<sub>s</sub>={preset?.Es?.toLocaleString()} ksi</span>
+                <span style={{whiteSpace: 'nowrap'}}>f<sub>py</sub>={preset?.fpy} ksi</span>
+                <span style={{whiteSpace: 'nowrap'}}>f<sub>pu</sub>={preset?.fpu} ksi</span>
+                <span style={{whiteSpace: 'nowrap'}}>Q={preset?.Q}</span>
+                <span style={{whiteSpace: 'nowrap'}}>R={preset?.R}</span>
+                <span style={{whiteSpace: 'nowrap'}}>K={preset?.K}</span>
               </div>
             </div>
           );
