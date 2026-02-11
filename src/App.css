@@ -17,12 +17,16 @@
 }
 
 .header-content {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.header-text {
+  flex: 1;
 }
 
 .header-badge {
@@ -846,34 +850,30 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Export PDF Button
+   Export PDF Button (in header)
    ══════════════════════════════════════════════════════════════════════════ */
-
-.results-header-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.65rem;
-}
 
 .btn-export-pdf {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.9rem;
-  background: linear-gradient(135deg, var(--blue-600), var(--blue-700));
+  padding: 0.42rem 0.85rem;
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-sm);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   transition: all 0.2s;
-  box-shadow: var(--shadow);
+  white-space: nowrap;
+  flex-shrink: 0;
+  backdrop-filter: blur(4px);
 }
 
 .btn-export-pdf:hover {
-  background: linear-gradient(135deg, var(--blue-700), var(--blue-800));
-  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .btn-export-pdf:active {
