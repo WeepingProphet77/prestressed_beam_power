@@ -156,7 +156,12 @@ export default function BeamInputForm({ onCalculate }) {
       {/* ── Section Geometry ── */}
       <div className="form-section">
         <h3>
-          <span className="section-icon">&#9634;</span>
+          <span className="section-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+              <line x1="1" y1="5" x2="13" y2="5" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+            </svg>
+          </span>
           Section Geometry
         </h3>
 
@@ -380,7 +385,7 @@ export default function BeamInputForm({ onCalculate }) {
 
         <div className="form-row">
           <label>
-            <span className="label-text">f'<sub>c</sub> (ksi)</span>
+            <span className="label-text">f&#x2032;<sub>c</sub> (ksi)</span>
             <input
               type="number"
               step="0.5"
@@ -406,7 +411,12 @@ export default function BeamInputForm({ onCalculate }) {
       {/* ── Steel Layers ── */}
       <div className="form-section">
         <h3>
-          <span className="section-icon">&#9881;</span>
+          <span className="section-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+              <circle cx="7" cy="7" r="2" fill="currentColor"/>
+            </svg>
+          </span>
           Steel Reinforcement Layers
         </h3>
 
@@ -515,6 +525,9 @@ export default function BeamInputForm({ onCalculate }) {
 
       <button type="submit" className="btn-calculate">
         Calculate Beam Strength
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </button>
     </form>
   );
