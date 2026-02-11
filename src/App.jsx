@@ -58,11 +58,11 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <div className="header-badge">ACI 318</div>
+          <div className="header-badge">ACI 318-19</div>
           <div className="header-text">
             <h1>Prestressed Concrete Beam Calculator</h1>
             <p className="subtitle">
-              Flexural strength analysis using the Devalapura-Tadros / PCI power formula
+              Flexural strength analysis using the Devalapura&#8211;Tadros / PCI power formula
             </p>
           </div>
         </div>
@@ -105,8 +105,8 @@ export default function App() {
       <footer className="app-footer">
         <div className="footer-content">
           <p>
-            Based on <strong>ACI 318-19</strong> and the <strong>Devalapura-Tadros power formula</strong> for
-            steel stress-strain behavior (PCI Design Handbook).
+            Based on <strong>ACI 318-19</strong> and the <strong>Devalapura&#8211;Tadros power formula</strong> for
+            steel stress&#8211;strain behavior (PCI Design Handbook).
           </p>
           <p className="disclaimer">
             For educational and preliminary design purposes only. Final designs must be

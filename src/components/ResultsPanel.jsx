@@ -82,7 +82,7 @@ export default function ResultsPanel({ results }) {
               <td>{cOverD.toFixed(4)}</td>
             </tr>
             <tr>
-              <td>f&apos;<sub>c</sub></td>
+              <td>f&#x2032;<sub>c</sub></td>
               <td>{fc} ksi</td>
             </tr>
           </tbody>
@@ -144,27 +144,42 @@ export default function ResultsPanel({ results }) {
       <div className="result-details formulas-ref">
         <h4>Formulas Used</h4>
         <div className="formula-block">
-          <div className="formula-title">Power Formula (Devalapura-Tadros / PCI):</div>
+          <div className="formula-title">Power Formula (Devalapura&#8211;Tadros / PCI):</div>
           <div className="formula">
-            f<sub>s</sub> = E<sub>s</sub>&middot;&epsilon;<sub>s</sub>&middot;[ Q + (1&minus;Q) /
-            [1 + (E<sub>s</sub>&middot;&epsilon;<sub>s</sub> / (K&middot;f<sub>py</sub>))<sup>R</sup>]<sup>1/R</sup> ]
+            <span className="formula-lhs">f<sub>s</sub></span> ={' '}
+            E<sub>s</sub>&#8239;&epsilon;<sub>s</sub>{' '}
+            <span className="formula-bracket">[</span>{' '}
+            Q + <span className="formula-frac"><span className="formula-num">1 &minus; Q</span><span className="formula-denom">[1 + (E<sub>s</sub>&epsilon;<sub>s</sub> / K f<sub>py</sub>)<sup>R</sup>]<sup>1/R</sup></span></span>{' '}
+            <span className="formula-bracket">]</span>{' '}
             &le; f<sub>pu</sub>
           </div>
         </div>
         <div className="formula-block">
           <div className="formula-title">Strain Compatibility (ACI 318):</div>
           <div className="formula">
-            &epsilon;<sub>si</sub> = &epsilon;<sub>cu</sub>&middot;(d<sub>i</sub>/c &minus; 1) +
-            f<sub>se</sub>/E<sub>s</sub>
+            <span className="formula-lhs">&epsilon;<sub>si</sub></span> ={' '}
+            &epsilon;<sub>cu</sub>&#8239;(d<sub>i</sub> / c &minus; 1) + f<sub>se</sub> / E<sub>s</sub>
           </div>
           <div className="formula-note">&epsilon;<sub>cu</sub> = 0.003 per ACI 318</div>
         </div>
         <div className="formula-block">
           <div className="formula-title">Whitney Stress Block (ACI 318 &sect;22.2):</div>
           <div className="formula">
-            C<sub>c</sub> = 0.85&middot;f&apos;<sub>c</sub>&middot;a&middot;b
-            &nbsp;&nbsp;where&nbsp;&nbsp; a = &beta;<sub>1</sub>&middot;c
+            <span className="formula-lhs">C<sub>c</sub></span> ={' '}
+            0.85&#8239;f&#x2032;<sub>c</sub>&#8239;a&#8239;b
           </div>
+          <div className="formula">
+            <span className="formula-lhs" style={{visibility: 'hidden'}}>C<sub>c</sub></span>{' '}
+            where a = &beta;<sub>1</sub>&#8239;c
+          </div>
+        </div>
+        <div className="formula-block">
+          <div className="formula-title">Strength Reduction &phi; (ACI 318 &sect;21.2):</div>
+          <div className="formula">
+            <span className="formula-lhs">&phi;</span> ={' '}
+            0.65 + 0.25&#8239;(&epsilon;<sub>t</sub> &minus; &epsilon;<sub>ty</sub>) / 0.003
+          </div>
+          <div className="formula-note">0.65 &le; &phi; &le; 0.90</div>
         </div>
       </div>
     </div>

@@ -163,7 +163,7 @@ export default function StrainDiagram({ results }) {
           y={margin.top + ((a / h) * plotH) / 2 + 4}
           className="stress-label"
         >
-          0.85f&apos;c
+          0.85f&#x2032;<tspan baselineShift="sub" fontSize="8">c</tspan>
         </text>
 
         {/* Compression resultant arrow */}
@@ -182,7 +182,7 @@ export default function StrainDiagram({ results }) {
             y={yScale(ccCentroid) + 4}
             className="force-label blue"
           >
-            Cc
+            C<tspan baselineShift="sub" fontSize="8">c</tspan>
           </text>
         </g>
 
@@ -206,7 +206,7 @@ export default function StrainDiagram({ results }) {
                 y={y + 4}
                 className={`force-label ${isTension ? 'green' : 'amber'}`}
               >
-                T{i + 1}
+                T<tspan baselineShift="sub" fontSize="8">{i + 1}</tspan>
               </text>
             </g>
           );

@@ -17,7 +17,6 @@ export default function BeamDiagram({ section, results }) {
   const isDoubleTee = sectionType === 'doubletee';
   const isHollowCore = sectionType === 'hollowcore';
   const maxWidth = isSandwich ? Math.max(bt, bb) : (bf || bw);
-  const maxDim = Math.max(maxWidth, h);
   const scale = Math.min(maxDrawWidth / maxWidth, maxDrawHeight / h);
 
   const drawW = maxWidth * scale;
@@ -377,7 +376,7 @@ export default function BeamDiagram({ section, results }) {
               />
               {/* Label */}
               <text x={annotX} y={ly + 4} className="diagram-label steel-label">
-                d={lr.depth}&quot; | f<tspan baseline-shift="sub" fontSize="8">s</tspan>={lr.stress.toFixed(1)} ksi
+                d={lr.depth.toFixed(2)}&quot; | f<tspan baselineShift="sub" fontSize="8">s</tspan>={lr.stress.toFixed(1)} ksi
               </text>
             </g>
           );
@@ -399,7 +398,7 @@ export default function BeamDiagram({ section, results }) {
         {/* Legend */}
         <g transform={`translate(${ox}, ${oy + drawH + 20})`}>
           <rect x="0" y="0" width="12" height="12" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1" />
-          <text x="16" y="10" className="diagram-label legend-text">Whitney stress block (0.85 f&apos;c)</text>
+          <text x="16" y="10" className="diagram-label legend-text">Whitney stress block (0.85f&#x2032;c)</text>
           <line x1="0" y1="22" x2="12" y2="22" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4,2" />
           <text x="16" y="26" className="diagram-label legend-text">Neutral axis</text>
         </g>
