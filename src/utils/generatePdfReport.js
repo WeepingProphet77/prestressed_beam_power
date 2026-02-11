@@ -1,22 +1,151 @@
 import { jsPDF } from 'jspdf';
 
+// ─── Greek / math text helpers ───────────────────────────────────────────────
+
+/**
+ * Map Unicode Greek characters to Symbol font character codes.
+ * jsPDF's built-in Symbol font maps ASCII letters to Greek glyphs.
+ */
+const GREEK = {
+  '\u03B1': 'a', // α
+  '\u03B2': 'b', // β
+  '\u03B3': 'g', // γ
+  '\u03B4': 'd', // δ
+  '\u03B5': 'e', // ε
+  '\u03B6': 'z', // ζ
+  '\u03B7': 'h', // η
+  '\u03B8': 'q', // θ
+  '\u03C0': 'p', // π
+  '\u03C1': 'r', // ρ
+  '\u03C3': 's', // σ
+  '\u03C4': 't', // τ
+  '\u03C6': 'f', // φ
+  '\u03C8': 'y', // ψ
+  '\u03C9': 'w', // ω
+};
+
+/**
+ * Sanitise a string so every character is renderable by Helvetica or Symbol.
+ * Characters outside WinAnsiEncoding are replaced with safe ASCII equivalents.
+ */
+function sanitize(str) {
+  return str
+    .replace(/\u2212/g, '-')   // − minus sign → hyphen
+    .replace(/\u2264/g, '<=')  // ≤
+    .replace(/\u2265/g, '>=')  // ≥
+    .replace(/\u2032/g, "'")   // ′ prime → apostrophe
+    .replace(/\u00D7/g, 'x');  // × → x
+}
+
+/**
+ * Render a string that may contain Greek Unicode characters.
+ * Automatically switches to the PDF Symbol font for Greek glyphs
+ * and back to the caller's font for everything else.
+ *
+ * Supports  align: 'left' | 'center' | 'right'
+ */
+function drawGreek(doc, str, x, y, options) {
+  const opts = options || {};
+  str = sanitize(str);
+
+  // Break into segments: { text, greek }
+  const segs = [];
+  let buf = '';
+  let bufGreek = false;
+
+  for (const ch of str) {
+    const isG = ch in GREEK;
+    if (segs.length === 0 && buf.length === 0) {
+      bufGreek = isG;
+    }
+    if (isG !== bufGreek) {
+      if (buf) segs.push({ text: buf, greek: bufGreek });
+      buf = '';
+      bufGreek = isG;
+    }
+    buf += isG ? GREEK[ch] : ch;
+  }
+  if (buf) segs.push({ text: buf, greek: bufGreek });
+
+  const saved = doc.getFont();
+
+  // Pre-compute total width so we can honour align
+  let totalW = 0;
+  for (const s of segs) {
+    if (s.greek) doc.setFont('symbol', 'normal');
+    else doc.setFont(saved.fontName, saved.fontStyle);
+    totalW += doc.getTextWidth(s.text);
+  }
+
+  const align = opts.align || 'left';
+  let cx = x;
+  if (align === 'center') cx = x - totalW / 2;
+  else if (align === 'right') cx = x - totalW;
+
+  for (const s of segs) {
+    if (s.greek) doc.setFont('symbol', 'normal');
+    else doc.setFont(saved.fontName, saved.fontStyle);
+    doc.text(s.text, cx, y);
+    cx += doc.getTextWidth(s.text);
+  }
+
+  doc.setFont(saved.fontName, saved.fontStyle);
+  return totalW;
+}
+
+/**
+ * Render text with a subscript portion.
+ *   drawSub(doc, "f", "s", x, y)  →  fₛ
+ * Returns the total advance width.
+ */
+function drawSub(doc, main, sub, x, y) {
+  const sz = doc.getFontSize();
+  const saved = doc.getFont();
+  const subSz = sz * 0.65;
+
+  const mw = drawGreek(doc, main, x, y);
+
+  doc.setFontSize(subSz);
+  doc.setFont(saved.fontName, saved.fontStyle);
+  const sw = drawGreek(doc, sub, x + mw, y + sz * 0.18);
+  doc.setFontSize(sz);
+  doc.setFont(saved.fontName, saved.fontStyle);
+  return mw + sw;
+}
+
+/**
+ * Render text with a superscript portion.
+ */
+function drawSup(doc, main, sup, x, y) {
+  const sz = doc.getFontSize();
+  const saved = doc.getFont();
+  const supSz = sz * 0.65;
+
+  const mw = drawGreek(doc, main, x, y);
+
+  doc.setFontSize(supSz);
+  doc.setFont(saved.fontName, saved.fontStyle);
+  const sw = drawGreek(doc, sup, x + mw, y - sz * 0.3);
+  doc.setFontSize(sz);
+  doc.setFont(saved.fontName, saved.fontStyle);
+  return mw + sw;
+}
+
+// ─── Main report generator ──────────────────────────────────────────────────
+
 /**
  * Generate a polished PDF report of beam analysis results.
- *
- * @param {object} results  – analysis results from analyzeBeam()
- * @param {object} section  – section geometry
- * @param {object} info     – report metadata { designerName, jobName, jobNumber, designNumber, date }
  */
 export default async function generatePdfReport(results, section, info) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const W = doc.internal.pageSize.getWidth();   // 612
   const H = doc.internal.pageSize.getHeight();  // 792
-  const M = 48; // page margin
-  const cw = W - 2 * M; // content width
+  const MG = 48; // page margin
+  const cw = W - 2 * MG; // content width
 
-  // ── Color palette ──
-  const blue = [37, 99, 235];       // primary
-  const blueDark = [30, 64, 175];   // header gradient
+  // Color palette
+  const blue = [37, 99, 235];
+  const blueDark = [30, 64, 175];
   const slate800 = [30, 41, 59];
   const slate600 = [71, 85, 105];
   const slate400 = [148, 163, 184];
@@ -26,23 +155,21 @@ export default async function generatePdfReport(results, section, info) {
   const green600 = [22, 163, 74];
   const amber600 = [217, 119, 6];
   const red600 = [220, 38, 38];
+  const blueLabel = [37, 99, 235];
 
-  let y = 0; // current y cursor
+  let y = 0;
 
-  // ── Helper: check if we need a new page ──
   const ensureSpace = (needed) => {
     if (y + needed > H - 50) {
       doc.addPage();
-      y = M;
-      drawPageFooter(doc, W, H, M, slate400, info);
+      y = MG;
     }
   };
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // PAGE 1 — Header + Summary + Tables
-  // ═══════════════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════════════════
+  // TITLE BAR
+  // ═════════════════════════════════════════════════════════════════════════
 
-  // ── Title bar ──
   doc.setFillColor(...blueDark);
   doc.rect(0, 0, W, 72, 'F');
   doc.setFillColor(...blue);
@@ -51,47 +178,45 @@ export default async function generatePdfReport(results, section, info) {
   // Badge
   doc.setFillColor(255, 255, 255, 30);
   doc.setDrawColor(255, 255, 255, 60);
-  doc.roundedRect(M, 18, 68, 22, 4, 4, 'FD');
+  doc.roundedRect(MG, 18, 68, 22, 4, 4, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...white);
-  doc.text('ACI 318-19', M + 34, 33, { align: 'center' });
+  doc.text('ACI 318-19', MG + 34, 33, { align: 'center' });
 
-  // Title text
+  // Title
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Prestressed Concrete Beam Calculator', M + 78, 32);
+  doc.text('Prestressed Concrete Beam Calculator', MG + 78, 32);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(200, 210, 230);
-  doc.text('Flexural Strength Analysis Report  \u2014  Devalapura\u2013Tadros / PCI Power Formula', M + 78, 48);
+  doc.text('Flexural Strength Analysis Report  --  Devalapura-Tadros / PCI Power Formula', MG + 78, 48);
 
   y = 90;
 
-  // ── Job Info Block ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // JOB INFO BLOCK
+  // ═════════════════════════════════════════════════════════════════════════
+
   doc.setFillColor(...slate100);
   doc.setDrawColor(...slate200);
-  doc.roundedRect(M, y, cw, 64, 4, 4, 'FD');
+  doc.roundedRect(MG, y, cw, 64, 4, 4, 'FD');
 
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...slate600);
-
-  const col1 = M + 12;
-  const col2 = M + cw / 2 + 12;
+  const col1 = MG + 12;
+  const col2 = MG + cw / 2 + 12;
   const row1 = y + 18;
   const row2 = y + 34;
   const row3 = y + 50;
 
-  const drawField = (x, yy, label, value) => {
+  const drawField = (fx, fy, label, value) => {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...slate400);
     doc.setFontSize(7.5);
-    doc.text(label, x, yy);
+    doc.text(label, fx, fy);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...slate800);
     doc.setFontSize(9.5);
-    doc.text(value || '\u2014', x + 70, yy);
+    doc.text(value || '--', fx + 70, fy);
   };
 
   drawField(col1, row1, 'Designer:', info.designerName);
@@ -102,7 +227,7 @@ export default async function generatePdfReport(results, section, info) {
 
   y += 80;
 
-  // ── Section type label ──
+  // Section type label
   const sectionNames = {
     rectangular: 'Rectangular',
     tbeam: 'T-Beam',
@@ -113,17 +238,16 @@ export default async function generatePdfReport(results, section, info) {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(...slate400);
-  doc.text(`Section Type: ${sectionNames[section.sectionType] || section.sectionType}`, M, y);
+  doc.text(`Section Type: ${sectionNames[section.sectionType] || section.sectionType}`, MG, y);
   y += 16;
 
-  // ── Summary Result Cards ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // SUMMARY CARDS
+  // ═════════════════════════════════════════════════════════════════════════
+
   const cardW = (cw - 18) / 4;
   const cardH = 56;
-
-  const {
-    phiMnFt, phiMn, MnFt, Mn, phi, epsilonT,
-    ductile, transition,
-  } = results;
+  const { phiMnFt, phiMn, MnFt, Mn, phi, epsilonT, ductile, transition } = results;
 
   const ductilityStatus = ductile
     ? 'Tension-Controlled'
@@ -132,22 +256,23 @@ export default async function generatePdfReport(results, section, info) {
     : 'Compression-Controlled';
   const ductilityColor = ductile ? green600 : transition ? amber600 : red600;
 
-  // Card 1 — φMn (primary / blue)
+  // Card 1 -- phiMn (primary blue)
   doc.setFillColor(...blue);
-  doc.roundedRect(M, y, cardW, cardH, 4, 4, 'F');
+  doc.roundedRect(MG, y, cardW, cardH, 4, 4, 'F');
   doc.setTextColor(200, 220, 255);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.text('\u03C6Mn (Design Strength)', M + cardW / 2, y + 14, { align: 'center' });
+  // "φMn (Design Strength)" — rendered with Symbol for φ
+  drawGreek(doc, '\u03C6M\u200An (Design Strength)', MG + cardW / 2, y + 14, { align: 'center' });
   doc.setTextColor(...white);
   doc.setFontSize(16);
-  doc.text(`${phiMnFt.toFixed(1)} kip-ft`, M + cardW / 2, y + 34, { align: 'center' });
+  doc.text(`${phiMnFt.toFixed(1)} kip-ft`, MG + cardW / 2, y + 34, { align: 'center' });
   doc.setFontSize(8);
   doc.setTextColor(180, 200, 240);
-  doc.text(`${phiMn.toFixed(1)} kip-in`, M + cardW / 2, y + 47, { align: 'center' });
+  doc.text(`${phiMn.toFixed(1)} kip-in`, MG + cardW / 2, y + 47, { align: 'center' });
 
-  // Card 2 — Mn
-  const c2x = M + cardW + 6;
+  // Card 2 -- Mn
+  const c2x = MG + cardW + 6;
   doc.setFillColor(...slate100);
   doc.setDrawColor(...slate200);
   doc.roundedRect(c2x, y, cardW, cardH, 4, 4, 'FD');
@@ -162,24 +287,24 @@ export default async function generatePdfReport(results, section, info) {
   doc.setTextColor(...slate400);
   doc.text(`${Mn.toFixed(1)} kip-in`, c2x + cardW / 2, y + 47, { align: 'center' });
 
-  // Card 3 — φ Factor
-  const c3x = M + 2 * (cardW + 6);
+  // Card 3 -- phi factor
+  const c3x = MG + 2 * (cardW + 6);
   doc.setFillColor(...slate100);
   doc.setDrawColor(...slate200);
   doc.roundedRect(c3x, y, cardW, cardH, 4, 4, 'FD');
   doc.setTextColor(...slate400);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.text('\u03C6 Factor', c3x + cardW / 2, y + 14, { align: 'center' });
+  drawGreek(doc, '\u03C6 Factor', c3x + cardW / 2, y + 14, { align: 'center' });
   doc.setTextColor(...slate800);
   doc.setFontSize(16);
   doc.text(phi.toFixed(3), c3x + cardW / 2, y + 34, { align: 'center' });
   doc.setFontSize(8);
   doc.setTextColor(...slate400);
-  doc.text('ACI 318 \u00A721.2', c3x + cardW / 2, y + 47, { align: 'center' });
+  doc.text('ACI 318 Sec. 21.2', c3x + cardW / 2, y + 47, { align: 'center' });
 
-  // Card 4 — Ductility
-  const c4x = M + 3 * (cardW + 6);
+  // Card 4 -- Ductility
+  const c4x = MG + 3 * (cardW + 6);
   doc.setFillColor(...slate100);
   doc.setDrawColor(...ductilityColor);
   doc.setLineWidth(1.5);
@@ -194,7 +319,9 @@ export default async function generatePdfReport(results, section, info) {
   doc.text(ductilityStatus, c4x + cardW / 2, y + 32, { align: 'center' });
   doc.setFontSize(8);
   doc.setTextColor(...slate400);
-  doc.text(`\u03B5t = ${epsilonT.toFixed(5)}`, c4x + cardW / 2, y + 47, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  // "εt = 0.01234"
+  drawGreek(doc, `\u03B5t = ${epsilonT.toFixed(5)}`, c4x + cardW / 2, y + 47, { align: 'center' });
 
   y += cardH + 20;
 
@@ -202,60 +329,134 @@ export default async function generatePdfReport(results, section, info) {
   const drawSectionHeading = (title) => {
     ensureSpace(20);
     doc.setFillColor(...blue);
-    doc.rect(M, y, 3, 14, 'F');
+    doc.rect(MG, y, 3, 14, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.setTextColor(...slate800);
-    doc.text(title, M + 10, y + 11);
+    doc.text(title, MG + 10, y + 11);
     y += 20;
   };
 
-  // ── Section Analysis Table ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // SECTION ANALYSIS TABLE
+  // ═════════════════════════════════════════════════════════════════════════
+
   drawSectionHeading('Section Analysis');
 
-  const detailRows = [
-    ['Neutral axis depth, c', `${results.c.toFixed(3)} in`],
-    ['Whitney stress block depth, a = \u03B21\u00B7c', `${results.a.toFixed(3)} in`],
-    ['\u03B21', results.beta1.toFixed(3)],
-    ['Concrete compression, Cc', `${results.Cc.toFixed(2)} kips`],
-    ['c / dt ratio', results.cOverD.toFixed(4)],
-    ['f\u2032c', `${results.fc} ksi`],
-  ];
-
-  const tblLeft = M;
-  const labelW = cw * 0.6;
-  const valW = cw * 0.4;
+  const tblLeft = MG;
+  const tblRight = MG + cw;
   const rowH = 20;
 
-  detailRows.forEach((row, i) => {
+  // Each row: [ labelFn(doc, x, y), valueFn(doc, x, y) ]
+  // Using functions so we can render Greek inline.
+  const detailData = [
+    {
+      label: (lx, ly) => { doc.text('Neutral axis depth, c', lx, ly); },
+      value: `${results.c.toFixed(3)} in`,
+    },
+    {
+      label: (lx, ly) => {
+        // "Whitney stress block depth, a = β₁·c"
+        let cx2 = lx;
+        doc.text('Whitney stress block depth, a = ', lx, ly);
+        cx2 += doc.getTextWidth('Whitney stress block depth, a = ');
+        cx2 += drawSub(doc, '\u03B2', '1', cx2, ly);
+        doc.text('\u00B7c', cx2, ly);
+      },
+      value: `${results.a.toFixed(3)} in`,
+    },
+    {
+      label: (lx, ly) => { drawSub(doc, '\u03B2', '1', lx, ly); },
+      value: results.beta1.toFixed(3),
+    },
+    {
+      label: (lx, ly) => {
+        let cx2 = lx;
+        doc.text('Concrete compression, C', lx, ly);
+        cx2 += doc.getTextWidth('Concrete compression, C');
+        drawSub(doc, '', 'c', cx2, ly);
+      },
+      value: `${results.Cc.toFixed(2)} kips`,
+    },
+    {
+      label: (lx, ly) => {
+        let cx2 = lx;
+        doc.text('c / d', lx, ly);
+        cx2 += doc.getTextWidth('c / d');
+        drawSub(doc, '', 't', cx2, ly);
+        cx2 += doc.getTextWidth('t') * 0.65 + 1;
+        doc.text(' ratio', cx2, ly);
+      },
+      value: results.cOverD.toFixed(4),
+    },
+    {
+      label: (lx, ly) => {
+        // f'c
+        doc.text("f'", lx, ly);
+        const w = doc.getTextWidth("f'");
+        drawSub(doc, '', 'c', lx + w, ly);
+      },
+      value: `${results.fc} ksi`,
+    },
+  ];
+
+  detailData.forEach((row, i) => {
     ensureSpace(rowH);
     if (i % 2 === 0) {
       doc.setFillColor(...slate100);
       doc.rect(tblLeft, y, cw, rowH, 'F');
     }
+    // Label
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...slate600);
-    doc.text(row[0], tblLeft + 8, y + 13.5);
+    row.label(tblLeft + 8, y + 13.5);
+    // Value
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
     doc.setTextColor(...slate800);
-    doc.text(row[1], tblLeft + labelW + valW - 8, y + 13.5, { align: 'right' });
+    doc.text(row.value, tblRight - 8, y + 13.5, { align: 'right' });
     y += rowH;
   });
 
-  // Thin bottom border
   doc.setDrawColor(...slate200);
-  doc.line(tblLeft, y, tblLeft + cw, y);
+  doc.line(tblLeft, y, tblRight, y);
   y += 16;
 
-  // ── Steel Layer Results Table ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // STEEL LAYER RESULTS TABLE
+  // ═════════════════════════════════════════════════════════════════════════
+
   drawSectionHeading('Steel Layer Results');
 
-  const headers = ['Layer', 'Type', 'As (in\u00B2)', 'd (in)', 'fse (ksi)', '\u03B5s', 'fs (ksi)', 'Force (kips)'];
-  const colWidths = [0.06, 0.20, 0.10, 0.09, 0.10, 0.14, 0.12, 0.13].map(
-    (f) => f * cw
-  );
-  const colAligns = ['center', 'left', 'right', 'right', 'right', 'right', 'right', 'right'];
+  // Column config: { label, labelFn?, width, align }
+  const colCfg = [
+    { label: 'Layer',   w: 0.06, align: 'center' },
+    { label: 'Type',    w: 0.20, align: 'left' },
+    { label: null,      w: 0.10, align: 'right',
+      labelFn: (lx, ly) => {
+        const tw = drawSub(doc, 'A', 's', lx, ly);
+        doc.text(' (in\u00B2)', lx + tw, ly);
+      }},
+    { label: 'd (in)',  w: 0.09, align: 'right' },
+    { label: null,      w: 0.10, align: 'right',
+      labelFn: (lx, ly) => {
+        const tw = drawSub(doc, 'f', 'se', lx, ly);
+        doc.text(' (ksi)', lx + tw, ly);
+      }},
+    { label: null,      w: 0.14, align: 'right',
+      labelFn: (lx, ly) => {
+        drawSub(doc, '\u03B5', 's', lx, ly);
+      }},
+    { label: null,      w: 0.12, align: 'right',
+      labelFn: (lx, ly) => {
+        const tw = drawSub(doc, 'f', 's', lx, ly);
+        doc.text(' (ksi)', lx + tw, ly);
+      }},
+    { label: 'Force (kips)', w: 0.13, align: 'right' },
+  ];
+
+  const colWidths = colCfg.map((c) => c.w * cw);
 
   // Header row
   ensureSpace(22);
@@ -266,13 +467,19 @@ export default async function generatePdfReport(results, section, info) {
   doc.setTextColor(...slate600);
 
   let cx = tblLeft;
-  headers.forEach((h, i) => {
-    const align = colAligns[i];
-    const tx =
-      align === 'right' ? cx + colWidths[i] - 6 :
-      align === 'center' ? cx + colWidths[i] / 2 :
-      cx + 6;
-    doc.text(h, tx, y + 13, { align: align === 'center' ? 'center' : align === 'right' ? 'right' : 'left' });
+  colCfg.forEach((col, i) => {
+    const pad = 6;
+    if (col.labelFn) {
+      // Custom label renderer — position depends on alignment
+      const lx = col.align === 'right' ? cx + colWidths[i] - pad - 30 : cx + pad;
+      col.labelFn(lx, y + 13);
+    } else if (col.label) {
+      const aopt = col.align === 'center' ? 'center' : col.align === 'right' ? 'right' : 'left';
+      const tx = col.align === 'right' ? cx + colWidths[i] - pad :
+                 col.align === 'center' ? cx + colWidths[i] / 2 :
+                 cx + pad;
+      doc.text(col.label, tx, y + 13, { align: aopt });
+    }
     cx += colWidths[i];
   });
   y += 20;
@@ -281,11 +488,10 @@ export default async function generatePdfReport(results, section, info) {
   const { layerResults } = results;
   layerResults.forEach((lr, idx) => {
     ensureSpace(20);
-    const isTension = lr.force > 0;
-    if (isTension) {
-      doc.setFillColor(240, 253, 244); // green tint
+    if (lr.force > 0) {
+      doc.setFillColor(240, 253, 244);
     } else {
-      doc.setFillColor(255, 251, 235); // amber tint
+      doc.setFillColor(255, 251, 235);
     }
     doc.rect(tblLeft, y, cw, 19, 'F');
 
@@ -306,17 +512,13 @@ export default async function generatePdfReport(results, section, info) {
 
     cx = tblLeft;
     cells.forEach((cell, i) => {
-      const align = colAligns[i];
-      const tx =
-        align === 'right' ? cx + colWidths[i] - 6 :
-        align === 'center' ? cx + colWidths[i] / 2 :
-        cx + 6;
-      doc.text(
-        cell,
-        tx,
-        y + 13,
-        { align: align === 'center' ? 'center' : align === 'right' ? 'right' : 'left' }
-      );
+      const a = colCfg[i].align;
+      const pad = 6;
+      const tx = a === 'right' ? cx + colWidths[i] - pad :
+                 a === 'center' ? cx + colWidths[i] / 2 :
+                 cx + pad;
+      const aopt = a === 'center' ? 'center' : a === 'right' ? 'right' : 'left';
+      doc.text(cell, tx, y + 13, { align: aopt });
       cx += colWidths[i];
     });
     y += 19;
@@ -326,7 +528,7 @@ export default async function generatePdfReport(results, section, info) {
   ensureSpace(22);
   doc.setDrawColor(...slate400);
   doc.setLineWidth(1);
-  doc.line(tblLeft, y, tblLeft + cw, y);
+  doc.line(tblLeft, y, tblRight, y);
   doc.setLineWidth(0.5);
   y += 2;
   doc.setFillColor(...slate100);
@@ -335,70 +537,150 @@ export default async function generatePdfReport(results, section, info) {
   doc.setFontSize(8.5);
   doc.setTextColor(...slate800);
   const totalForce = layerResults.reduce((s, lr) => s + lr.force, 0);
-  doc.text('Total Steel Force', tblLeft + cw - colWidths[colWidths.length - 1] - 8, y + 13, { align: 'right' });
-  doc.text(`${totalForce.toFixed(2)} kips`, tblLeft + cw - 6, y + 13, { align: 'right' });
+  doc.text('Total Steel Force', tblRight - colWidths[colWidths.length - 1] - 8, y + 13, { align: 'right' });
+  doc.text(`${totalForce.toFixed(2)} kips`, tblRight - 6, y + 13, { align: 'right' });
   y += 28;
 
-  // ── Formulas Reference ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // FORMULAS REFERENCE
+  // ═════════════════════════════════════════════════════════════════════════
+
   drawSectionHeading('Formulas Used');
 
-  const formulas = [
-    {
-      title: 'Power Formula (Devalapura\u2013Tadros / PCI):',
-      expr: 'fs = Es\u00B7\u03B5s \u00B7 [ Q + (1 \u2212 Q) / [1 + (Es\u00B7\u03B5s / K\u00B7fpy)^R ]^(1/R) ]  \u2264 fpu',
-    },
-    {
-      title: 'Strain Compatibility (ACI 318):',
-      expr: '\u03B5si = \u03B5cu\u00B7(di / c \u2212 1) + fse / Es          (\u03B5cu = 0.003)',
-    },
-    {
-      title: 'Whitney Stress Block (ACI 318 \u00A722.2):',
-      expr: 'Cc = 0.85\u00B7f\u2032c\u00B7a\u00B7b          where a = \u03B21\u00B7c',
-    },
-    {
-      title: 'Strength Reduction \u03C6 (ACI 318 \u00A721.2):',
-      expr: '\u03C6 = 0.65 + 0.25\u00B7(\u03B5t \u2212 \u03B5ty) / 0.003          (0.65 \u2264 \u03C6 \u2264 0.90)',
-    },
-  ];
-
-  ensureSpace(formulas.length * 32 + 16);
+  const formulaBlockH = 148;
+  ensureSpace(formulaBlockH + 16);
   doc.setFillColor(...slate100);
   doc.setDrawColor(...slate200);
-  const formulaBlockH = formulas.length * 32 + 10;
-  doc.roundedRect(M, y, cw, formulaBlockH, 4, 4, 'FD');
+  doc.roundedRect(MG, y, cw, formulaBlockH, 4, 4, 'FD');
 
-  const fy = y + 12;
-  formulas.forEach((f, i) => {
-    const baseY = fy + i * 32;
+  const fx0 = MG + 10;
+  let fy = y + 14;
+  const formulaGap = 36;
+
+  const drawFormulaTitle = (title) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(...slate600);
-    doc.text(f.title, M + 10, baseY);
-    doc.setFont('courier', 'normal');
+    drawGreek(doc, title, fx0, fy);
+  };
+
+  const drawFormulaExpr = (renderFn) => {
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...slate800);
-    doc.text(f.expr, M + 14, baseY + 14);
+    renderFn(fx0 + 4, fy + 14);
+  };
+
+  const drawFormulaNote = (note) => {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(...slate400);
+    drawGreek(doc, note, fx0 + 8, fy + 24);
+  };
+
+  // Formula 1: Power Formula
+  drawFormulaTitle('Power Formula (Devalapura-Tadros / PCI):');
+  drawFormulaExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawSub(doc, 'f', 's', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
+    px += drawSub(doc, 'E', 's', px, ey);
+    doc.text('\u00B7', px, ey); px += doc.getTextWidth('\u00B7');
+    px += drawSub(doc, '\u03B5', 's', px, ey);
+    doc.text(' [ Q + (1 - Q) / [1 + (', px, ey); px += doc.getTextWidth(' [ Q + (1 - Q) / [1 + (');
+    px += drawSub(doc, 'E', 's', px, ey);
+    doc.text('\u00B7', px, ey); px += doc.getTextWidth('\u00B7');
+    px += drawSub(doc, '\u03B5', 's', px, ey);
+    doc.text(' / K\u00B7', px, ey); px += doc.getTextWidth(' / K\u00B7');
+    px += drawSub(doc, 'f', 'py', px, ey);
+    px += drawSup(doc, ')', 'R', px, ey);
+    px += drawSup(doc, ']', '1/R', px, ey);
+    doc.text(' ]', px, ey); px += doc.getTextWidth(' ]');
+    doc.text('  <=  ', px, ey); px += doc.getTextWidth('  <=  ');
+    drawSub(doc, 'f', 'pu', px, ey);
   });
+  fy += formulaGap;
+
+  // Formula 2: Strain Compatibility
+  drawFormulaTitle('Strain Compatibility (ACI 318):');
+  drawFormulaExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawSub(doc, '\u03B5', 'si', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
+    px += drawSub(doc, '\u03B5', 'cu', px, ey);
+    doc.text('\u00B7(', px, ey); px += doc.getTextWidth('\u00B7(');
+    px += drawSub(doc, 'd', 'i', px, ey);
+    doc.text(' / c - 1) + ', px, ey); px += doc.getTextWidth(' / c - 1) + ');
+    px += drawSub(doc, 'f', 'se', px, ey);
+    doc.text(' / ', px, ey); px += doc.getTextWidth(' / ');
+    drawSub(doc, 'E', 's', px, ey);
+  });
+  drawFormulaNote('\u03B5cu = 0.003 per ACI 318');
+  fy += formulaGap;
+
+  // Formula 3: Whitney Stress Block
+  drawFormulaTitle('Whitney Stress Block (ACI 318 Sec. 22.2):');
+  drawFormulaExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawSub(doc, 'C', 'c', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(" = 0.85\u00B7f'", px, ey); px += doc.getTextWidth(" = 0.85\u00B7f'");
+    px += drawSub(doc, '', 'c', px, ey);
+    doc.text('\u00B7a\u00B7b', px, ey); px += doc.getTextWidth('\u00B7a\u00B7b');
+    doc.text('     where  a = ', px, ey); px += doc.getTextWidth('     where  a = ');
+    px += drawSub(doc, '\u03B2', '1', px, ey);
+    doc.text('\u00B7c', px, ey);
+  });
+  fy += formulaGap;
+
+  // Formula 4: Strength Reduction
+  drawFormulaTitle('Strength Reduction \u03C6 (ACI 318 Sec. 21.2):');
+  drawFormulaExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawGreek(doc, '\u03C6', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(' = 0.65 + 0.25\u00B7(', px, ey); px += doc.getTextWidth(' = 0.65 + 0.25\u00B7(');
+    px += drawSub(doc, '\u03B5', 't', px, ey);
+    doc.text(' - ', px, ey); px += doc.getTextWidth(' - ');
+    px += drawSub(doc, '\u03B5', 'ty', px, ey);
+    doc.text(') / 0.003', px, ey);
+  });
+  drawFormulaNote('0.65 <= \u03C6 <= 0.90');
+  fy += formulaGap;
+
   y += formulaBlockH + 16;
 
-  // ── Diagrams ──
-  // Capture SVG diagrams from the DOM and embed as images
+  // ═════════════════════════════════════════════════════════════════════════
+  // DIAGRAMS
+  // ═════════════════════════════════════════════════════════════════════════
+
   const diagramImages = await captureDiagrams();
 
   if (diagramImages.length > 0) {
     ensureSpace(30);
     drawSectionHeading('Diagrams');
 
-    // Determine layout: try to fit side-by-side if we have space, else stack
     const diagramAreaW = cw;
     const availH = H - 50 - y;
 
     if (diagramImages.length === 3 && availH >= 200) {
-      // Three diagrams side by side
       const gap = 8;
       const imgW = (diagramAreaW - gap * 2) / 3;
 
-      // Determine height to maintain aspect ratios
       let maxImgH = 0;
       diagramImages.forEach((img) => {
         const aspect = img.height / img.width;
@@ -406,43 +688,53 @@ export default async function generatePdfReport(results, section, info) {
         if (h > maxImgH) maxImgH = h;
       });
 
-      // Cap max height
       const capH = Math.min(maxImgH, availH - 10);
 
-      // Check if they fit on this page, otherwise new page
       if (y + capH > H - 50) {
         doc.addPage();
-        y = M;
-        drawPageFooter(doc, W, H, M, slate400, info);
+        y = MG;
         drawSectionHeading('Diagrams');
       }
 
       diagramImages.forEach((img, i) => {
-        const ix = M + i * (imgW + gap);
+        const ix = MG + i * (imgW + gap);
         const aspect = img.height / img.width;
         const ih = Math.min(imgW * aspect, capH);
         doc.addImage(img.dataUrl, 'PNG', ix, y, imgW, ih);
       });
-
       y += capH + 10;
     } else {
-      // Stack diagrams vertically
       for (const img of diagramImages) {
         const aspect = img.height / img.width;
         const imgW = Math.min(diagramAreaW, 400);
         const imgH = imgW * aspect;
         ensureSpace(imgH + 10);
-        doc.addImage(img.dataUrl, 'PNG', M, y, imgW, imgH);
+        doc.addImage(img.dataUrl, 'PNG', MG, y, imgW, imgH);
         y += imgH + 10;
       }
     }
   }
 
-  // ── Page footers ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // PAGE FOOTERS
+  // ═════════════════════════════════════════════════════════════════════════
+
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    drawPageFooter(doc, W, H, M, slate400, info, p, totalPages);
+    const footerY = H - 28;
+    doc.setDrawColor(...slate400);
+    doc.setLineWidth(0.5);
+    doc.line(MG, footerY, W - MG, footerY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...slate400);
+    doc.text(
+      'ACI 318-19  |  Devalapura-Tadros / PCI Power Formula  |  For educational and preliminary design purposes only',
+      MG,
+      footerY + 12
+    );
+    doc.text(`Page ${p} of ${totalPages}`, W - MG, footerY + 12, { align: 'right' });
   }
 
   // ── Save ──
@@ -452,29 +744,8 @@ export default async function generatePdfReport(results, section, info) {
   doc.save(filename);
 }
 
-/**
- * Draw footer on a page.
- */
-function drawPageFooter(doc, W, H, M, slate400, info, page, totalPages) {
-  if (!page) return;
-  const footerY = H - 28;
-  doc.setDrawColor(...slate400);
-  doc.setLineWidth(0.5);
-  doc.line(M, footerY, W - M, footerY);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(...slate400);
-  doc.text(
-    'ACI 318-19  \u2022  Devalapura\u2013Tadros / PCI Power Formula  \u2022  For educational and preliminary design purposes only',
-    M,
-    footerY + 12
-  );
-  doc.text(`Page ${page} of ${totalPages}`, W - M, footerY + 12, { align: 'right' });
-}
+// ─── SVG capture helpers ─────────────────────────────────────────────────────
 
-/**
- * Capture SVG diagram elements from the DOM and convert to PNG data URLs.
- */
 async function captureDiagrams() {
   const selectors = ['.beam-diagram svg', '.strain-diagram svg', '.stress-strain-chart svg'];
   const images = [];
@@ -485,7 +756,6 @@ async function captureDiagrams() {
 
     try {
       const dataUrl = await svgToDataUrl(svgEl);
-      // Get intrinsic dimensions from viewBox
       const vb = svgEl.getAttribute('viewBox');
       let width = 400;
       let height = 300;
@@ -498,36 +768,26 @@ async function captureDiagrams() {
       }
       images.push({ dataUrl, width, height });
     } catch {
-      // Skip diagram if conversion fails
+      // skip
     }
   }
 
   return images;
 }
 
-/**
- * Convert an SVG element to a PNG data URL by:
- * 1. Cloning and inlining all computed styles
- * 2. Serializing to SVG string
- * 3. Drawing onto a canvas
- * 4. Exporting as PNG
- */
 function svgToDataUrl(svgEl) {
   return new Promise((resolve, reject) => {
     try {
       const clone = svgEl.cloneNode(true);
-
-      // Inline computed styles on all elements
       inlineStyles(svgEl, clone);
 
-      // Set explicit width/height for rendering
       const vb = svgEl.getAttribute('viewBox');
       let width = 800;
       let height = 600;
       if (vb) {
         const parts = vb.split(/[\s,]+/).map(Number);
         if (parts.length === 4) {
-          width = parts[2] * 2;  // 2x for crisp rendering
+          width = parts[2] * 2;
           height = parts[3] * 2;
         }
       }
@@ -536,7 +796,6 @@ function svgToDataUrl(svgEl) {
       clone.setAttribute('height', height);
       clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
-      // Add a white background rectangle
       const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       bg.setAttribute('width', '100%');
       bg.setAttribute('height', '100%');
@@ -570,33 +829,25 @@ function svgToDataUrl(svgEl) {
   });
 }
 
-/**
- * Recursively inline computed styles from the original DOM element
- * onto the cloned element, so CSS classes and variables resolve properly.
- */
 function inlineStyles(original, clone) {
-  if (original.nodeType !== 1) return; // element nodes only
+  if (original.nodeType !== 1) return;
 
   const computed = window.getComputedStyle(original);
-  const important = [
+  const props = [
     'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-dashoffset',
     'stroke-linecap', 'stroke-linejoin', 'stroke-opacity', 'fill-opacity',
     'opacity', 'font-family', 'font-size', 'font-weight', 'font-style',
     'text-anchor', 'dominant-baseline', 'color', 'visibility', 'display',
   ];
 
-  for (const prop of important) {
+  for (const prop of props) {
     const val = computed.getPropertyValue(prop);
-    if (val) {
-      clone.style.setProperty(prop, val);
-    }
+    if (val) clone.style.setProperty(prop, val);
   }
 
   const origChildren = original.children;
   const cloneChildren = clone.children;
   for (let i = 0; i < origChildren.length; i++) {
-    if (cloneChildren[i]) {
-      inlineStyles(origChildren[i], cloneChildren[i]);
-    }
+    if (cloneChildren[i]) inlineStyles(origChildren[i], cloneChildren[i]);
   }
 }

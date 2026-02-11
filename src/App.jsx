@@ -81,6 +81,20 @@ export default function App() {
               Flexural strength analysis using the Devalapura&#8211;Tadros / PCI power formula
             </p>
           </div>
+          {results && (
+            <button
+              type="button"
+              className="btn-export-pdf"
+              onClick={() => setExportOpen(true)}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 1h5l4 4v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                <path d="M9 1v4h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5.5 10.5l2 2 2-2M7.5 12.5V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Export PDF
+            </button>
+          )}
         </div>
       </header>
 
@@ -102,20 +116,6 @@ export default function App() {
 
           {results && (
             <div className="results-column" ref={resultsRef}>
-              <div className="results-header-row">
-                <button
-                  type="button"
-                  className="btn-export-pdf"
-                  onClick={() => setExportOpen(true)}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 1h5l4 4v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-                    <path d="M9 1v4h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M5.5 10.5l2 2 2-2M7.5 12.5V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Export PDF
-                </button>
-              </div>
               <ResultsPanel results={results} />
             </div>
           )}
