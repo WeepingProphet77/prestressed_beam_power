@@ -4,13 +4,17 @@ import BeamDiagram from './components/BeamDiagram';
 import StressStrainChart from './components/StressStrainChart';
 import StrainDiagram from './components/StrainDiagram';
 import ResultsPanel from './components/ResultsPanel';
+import ExportDialog from './components/ExportDialog';
 import { analyzeBeam } from './utils/beamCalculations';
+import generatePdfReport from './utils/generatePdfReport';
 import './App.css';
 
 export default function App() {
   const [results, setResults] = useState(null);
   const [section, setSection] = useState(null);
   const [error, setError] = useState(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const resultsRef = useRef(null);
 
   const handleCalculate = (sec, layers) => {
@@ -54,6 +58,18 @@ export default function App() {
     }
   };
 
+  const handleExport = async (info) => {
+    setExporting(true);
+    try {
+      await generatePdfReport(results, section, info);
+    } catch (e) {
+      console.error('PDF generation failed:', e);
+    } finally {
+      setExporting(false);
+      setExportOpen(false);
+    }
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -86,6 +102,20 @@ export default function App() {
 
           {results && (
             <div className="results-column" ref={resultsRef}>
+              <div className="results-header-row">
+                <button
+                  type="button"
+                  className="btn-export-pdf"
+                  onClick={() => setExportOpen(true)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 1h5l4 4v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                    <path d="M9 1v4h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M5.5 10.5l2 2 2-2M7.5 12.5V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Export PDF
+                </button>
+              </div>
               <ResultsPanel results={results} />
             </div>
           )}
@@ -114,6 +144,13 @@ export default function App() {
           </p>
         </div>
       </footer>
+
+      <ExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onExport={handleExport}
+        exporting={exporting}
+      />
     </div>
   );
 }
