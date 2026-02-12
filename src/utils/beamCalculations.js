@@ -34,14 +34,19 @@ export function phiFactor(epsilonT, epsilonTy) {
  *
  *   fs = Es·εs · [ Q + (1 − Q) / [1 + (Es·εs / (K·fpy))^R ]^(1/R) ]
  *
- * The result is capped at ±fpu and the sign follows the sign of εs.
+ * The result is capped at:
+ *   - fpy (yield) for mild steel (Grade 60, 65, 70)
+ *   - fpu (ultimate) for prestressing steel (Gr. 150, 250, 270)
+ * This is controlled by the steel.stressCap property.
  *
  * @param {number} epsilonS  – total steel strain (positive = tension)
- * @param {object} steel     – { Es, fpu, fpy, Q, R, K }
+ * @param {object} steel     – { Es, fpu, fpy, Q, R, K, stressCap }
  * @returns {number} steel stress (ksi), same sign convention as strain
  */
 export function powerFormulaStress(epsilonS, steel) {
-  const { Es, fpu, fpy, Q, R, K } = steel;
+  const { Es, fpy, Q, R, K } = steel;
+  // stressCap: fpy for mild steel, fpu for prestressing steel
+  const cap = steel.stressCap ?? steel.fpu;
 
   if (Math.abs(epsilonS) < 1e-12) return 0;
 
@@ -52,8 +57,8 @@ export function powerFormulaStress(epsilonS, steel) {
   const bracket = Math.pow(1 + ratioR, 1 / R);
   const fs = EsEps * (Q + (1 - Q) / bracket);
 
-  // Cap at fpu
-  const fsCapped = Math.min(fs, fpu);
+  // Cap at yield for mild steel, at ultimate for prestressing steel
+  const fsCapped = Math.min(fs, cap);
 
   return epsilonS >= 0 ? fsCapped : -fsCapped;
 }

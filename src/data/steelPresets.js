@@ -2,7 +2,9 @@
  * Steel type presets with power formula parameters (Devalapura-Tadros / PCI).
  *
  * Power formula:
- *   fs = Es * εs * [ Q + (1 - Q) / [1 + (Es*εs / (K*fpy))^R ]^(1/R) ]  ≤  fpu
+ *   fs = Es * εs * [ Q + (1 - Q) / [1 + (Es*εs / (K*fpy))^R ]^(1/R) ]  ≤  stressCap
+ *
+ * stressCap = fpy (yield) for mild steel, fpu (ultimate) for prestressing steel
  *
  * Units: ksi for stresses/moduli, in for lengths
  */
@@ -14,8 +16,9 @@ const steelPresets = [
     description: 'ASTM A615 Gr. 60 deformed reinforcing bars',
     category: 'mild',
     Es: 29000,   // ksi
-    fpu: 90,     // ksi (ultimate for mild steel, ~1.5*fy per typical)
+    fpu: 90,     // ksi (ultimate tensile strength)
     fpy: 60,     // ksi (yield)
+    stressCap: 60, // mild steel: cap at fy
     Q: 0.0,
     R: 100,
     K: 1.096,
@@ -29,6 +32,7 @@ const steelPresets = [
     Es: 29000,
     fpu: 80,
     fpy: 65,
+    stressCap: 65, // mild steel: cap at fy
     Q: 0.0,
     R: 100,
     K: 1.096,
@@ -42,6 +46,7 @@ const steelPresets = [
     Es: 29000,
     fpu: 90,
     fpy: 70,
+    stressCap: 70, // mild steel: cap at fy
     Q: 0.0,
     R: 100,
     K: 1.06,
@@ -55,6 +60,7 @@ const steelPresets = [
     Es: 29000,
     fpu: 150,
     fpy: 127.5,
+    stressCap: 150, // prestressing steel: cap at fpu
     Q: 0.016,
     R: 3.75,
     K: 1.04,
@@ -68,6 +74,7 @@ const steelPresets = [
     Es: 28800,
     fpu: 270,
     fpy: 243,
+    stressCap: 270, // prestressing steel: cap at fpu
     Q: 0.031,
     R: 7.36,
     K: 1.043,
@@ -81,6 +88,7 @@ const steelPresets = [
     Es: 28800,
     fpu: 250,
     fpy: 225,
+    stressCap: 250, // prestressing steel: cap at fpu
     Q: 0.031,
     R: 7.36,
     K: 1.043,
