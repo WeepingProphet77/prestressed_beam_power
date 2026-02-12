@@ -263,7 +263,7 @@ export default async function generatePdfReport(results, section, info) {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   // "φMn (Design Strength)" — rendered with Symbol for φ
-  drawGreek(doc, '\u03C6M\u200An (Design Strength)', MG + cardW / 2, y + 14, { align: 'center' });
+  drawGreek(doc, '\u03C6Mn (Design Strength)', MG + cardW / 2, y + 14, { align: 'center' });
   doc.setTextColor(...white);
   doc.setFontSize(16);
   doc.text(`${phiMnFt.toFixed(1)} kip-ft`, MG + cardW / 2, y + 34, { align: 'center' });
