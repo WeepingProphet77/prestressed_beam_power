@@ -20,6 +20,7 @@ export default function ResultsPanel({ results }) {
     fc,
     ductile,
     transition,
+    cracking,
   } = results;
 
   const ductilityStatus = ductile
@@ -139,6 +140,127 @@ export default function ResultsPanel({ results }) {
           </table>
         </div>
       </div>
+
+      {/* Prestress & Cracking Analysis */}
+      {cracking && (
+        <div className="result-details prestress-cracking-section">
+          <h4>Prestress &amp; Cracking Analysis</h4>
+
+          {/* Computed values table */}
+          <table className="detail-table">
+            <tbody>
+              <tr>
+                <td>Gross section area, A<sub>g</sub></td>
+                <td>{cracking.sectionProps.A.toFixed(2)} in&sup2;</td>
+              </tr>
+              <tr>
+                <td>Gross moment of inertia, I<sub>g</sub></td>
+                <td>{cracking.sectionProps.Ig.toFixed(1)} in&#x2074;</td>
+              </tr>
+              <tr>
+                <td>Section modulus (bottom), S<sub>b</sub></td>
+                <td>{cracking.sectionProps.Sb.toFixed(2)} in&sup3;</td>
+              </tr>
+              <tr>
+                <td>Centroid depth, y&#x0304;<sub>cg</sub></td>
+                <td>{cracking.sectionProps.yCg.toFixed(3)} in</td>
+              </tr>
+              <tr>
+                <td>Effective prestress force, P<sub>e</sub></td>
+                <td>{cracking.P.toFixed(2)} kips</td>
+              </tr>
+              <tr>
+                <td>
+                  Avg. precompressive stress, f<sub>pc</sub> = P<sub>e</sub> / A<sub>g</sub>
+                </td>
+                <td>{cracking.fpc.toFixed(4)} ksi</td>
+              </tr>
+              <tr>
+                <td>Prestress eccentricity, e</td>
+                <td>{cracking.e.toFixed(3)} in</td>
+              </tr>
+              <tr>
+                <td>
+                  Modulus of rupture, f<sub>r</sub> = 7.5&radic;(f&#x2032;<sub>c</sub>)
+                </td>
+                <td>{cracking.fr.toFixed(4)} ksi</td>
+              </tr>
+              <tr>
+                <td>Cracking moment, M<sub>cr</sub></td>
+                <td>{cracking.McrFt.toFixed(1)} kip-ft</td>
+              </tr>
+              <tr>
+                <td>1.2 M<sub>cr</sub></td>
+                <td>{cracking.thresholdFt.toFixed(1)} kip-ft</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Equations */}
+          <div className="cracking-formulas">
+            <div className="formula-block">
+              <div className="formula-title">
+                Average Precompressive Stress:
+              </div>
+              <div className="formula">
+                <span className="formula-lhs">f<sub>pc</sub></span> ={' '}
+                P<sub>e</sub> / A<sub>g</sub>
+                {' '}= {cracking.P.toFixed(2)} / {cracking.sectionProps.A.toFixed(2)}
+                {' '}= {cracking.fpc.toFixed(4)} ksi
+              </div>
+            </div>
+            <div className="formula-block">
+              <div className="formula-title">
+                Modulus of Rupture (ACI 318 &sect;19.2.3):
+              </div>
+              <div className="formula">
+                <span className="formula-lhs">f<sub>r</sub></span> ={' '}
+                7.5&radic;(f&#x2032;<sub>c</sub>){' '}
+                = 7.5&radic;({(fc * 1000).toFixed(0)})
+                {' '}= {(cracking.fr * 1000).toFixed(1)} psi
+                {' '}= {cracking.fr.toFixed(4)} ksi
+              </div>
+              <div className="formula-note">f&#x2032;<sub>c</sub> in psi for this equation</div>
+            </div>
+            <div className="formula-block">
+              <div className="formula-title">
+                Cracking Moment (ACI 318 &sect;24.2.3.5):
+              </div>
+              <div className="formula">
+                <span className="formula-lhs">M<sub>cr</sub></span> ={' '}
+                S<sub>b</sub>&#8239;(f<sub>r</sub> + P<sub>e</sub>/A<sub>g</sub> + P<sub>e</sub>&#8239;e / S<sub>b</sub>)
+              </div>
+              <div className="formula">
+                <span className="formula-lhs" style={{visibility: 'hidden'}}>M<sub>cr</sub></span> ={' '}
+                {cracking.sectionProps.Sb.toFixed(2)}&#8239;({cracking.fr.toFixed(4)} + {cracking.P.toFixed(2)}/{cracking.sectionProps.A.toFixed(2)} + {cracking.P.toFixed(2)} &times; {cracking.e.toFixed(3)} / {cracking.sectionProps.Sb.toFixed(2)})
+              </div>
+              <div className="formula">
+                <span className="formula-lhs" style={{visibility: 'hidden'}}>M<sub>cr</sub></span> ={' '}
+                {cracking.Mcr.toFixed(1)} kip-in = {cracking.McrFt.toFixed(1)} kip-ft
+              </div>
+            </div>
+            <div className="formula-block">
+              <div className="formula-title">
+                Minimum Flexural Strength (ACI 318 &sect;9.6.2.2):
+              </div>
+              <div className="formula">
+                <span className="formula-lhs">&phi;M<sub>n</sub></span>{' '}
+                &ge; 1.2&#8239;M<sub>cr</sub>
+              </div>
+              <div className="formula">
+                {phiMnFt.toFixed(1)} kip-ft{' '}
+                {cracking.passesMinStrength ? '\u2265' : '<'}{' '}
+                {cracking.thresholdFt.toFixed(1)} kip-ft
+              </div>
+              <div className={`cracking-check ${cracking.passesMinStrength ? 'check-pass' : 'check-fail'}`}>
+                {cracking.passesMinStrength
+                  ? '\u2713 OK \u2014 \u03C6Mn \u2265 1.2Mcr'
+                  : '\u2717 FAILS \u2014 \u03C6Mn < 1.2Mcr'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Formulas Reference */}
       <div className="result-details formulas-ref">
