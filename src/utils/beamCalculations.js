@@ -394,6 +394,9 @@ export function analyzeBeam(section, steelLayers) {
   const dt = maxDepth || 1;
   const cOverD = c / dt;
 
+  // Prestress & cracking analysis
+  const cracking = prestressAndCracking(section, steelLayers, phiMn);
+
   return {
     c,
     a,
@@ -412,6 +415,7 @@ export function analyzeBeam(section, steelLayers) {
     section,
     ductile: epsilonT >= epsilonTy + 0.003,
     transition: epsilonT >= epsilonTy && epsilonT < epsilonTy + 0.003,
+    cracking,
   };
 }
 
@@ -421,4 +425,166 @@ export function analyzeBeam(section, steelLayers) {
  */
 export function decompressionStrain(fse, Es) {
   return fse / Es;
+}
+
+// ─── Gross section properties ────────────────────────────────────────────────
+
+/**
+ * Compute gross cross-section properties for all supported section types.
+ *
+ * Returns { A, yCg, Ig, yb, Sb }
+ *   A   – gross area (in²)
+ *   yCg – centroid depth from extreme compression fiber (in)
+ *   Ig  – gross moment of inertia about centroidal axis (in⁴)
+ *   yb  – distance from centroid to extreme tension fiber (in)
+ *   Sb  – section modulus for the extreme tension fiber (in³)
+ */
+export function grossSectionProperties(section) {
+  const { h } = section;
+
+  let A, yCg, Ig;
+
+  switch (section.sectionType) {
+    case 'rectangular': {
+      const b = section.bw;
+      A = b * h;
+      yCg = h / 2;
+      Ig = (b * Math.pow(h, 3)) / 12;
+      break;
+    }
+
+    case 'tbeam': {
+      const { bf, bw, hf } = section;
+      const hw = h - hf;
+      const flangeA = bf * hf;
+      const webA = bw * hw;
+      A = flangeA + webA;
+      yCg = (flangeA * hf / 2 + webA * (hf + hw / 2)) / A;
+      const flangeI = (bf * Math.pow(hf, 3)) / 12 + flangeA * Math.pow(yCg - hf / 2, 2);
+      const webI = (bw * Math.pow(hw, 3)) / 12 + webA * Math.pow(hf + hw / 2 - yCg, 2);
+      Ig = flangeI + webI;
+      break;
+    }
+
+    case 'sandwich': {
+      const { bt, ht, hg, bb } = section;
+      const hb2 = h - ht - hg;
+      const topA = bt * ht;
+      const botA = bb * hb2;
+      A = topA + botA;
+      yCg = (topA * ht / 2 + botA * (ht + hg + hb2 / 2)) / A;
+      const topI = (bt * Math.pow(ht, 3)) / 12 + topA * Math.pow(yCg - ht / 2, 2);
+      const botI = (bb * Math.pow(hb2, 3)) / 12 + botA * Math.pow(ht + hg + hb2 / 2 - yCg, 2);
+      Ig = topI + botI;
+      break;
+    }
+
+    case 'doubletee': {
+      const { bf, hf, numStems = 2, stemWidth } = section;
+      const hs = h - hf;
+      const flangeA = bf * hf;
+      const stemA = numStems * stemWidth * hs;
+      A = flangeA + stemA;
+      yCg = (flangeA * hf / 2 + stemA * (hf + hs / 2)) / A;
+      const flangeI = (bf * Math.pow(hf, 3)) / 12 + flangeA * Math.pow(yCg - hf / 2, 2);
+      const stemI = (numStems * stemWidth * Math.pow(hs, 3)) / 12 + stemA * Math.pow(hf + hs / 2 - yCg, 2);
+      Ig = flangeI + stemI;
+      break;
+    }
+
+    case 'hollowcore': {
+      const { bf, numVoids, voidDiameter, voidCenterDepth } = section;
+      const r = voidDiameter / 2;
+      const voidA = numVoids * Math.PI * r * r;
+      A = bf * h - voidA;
+      // Gross rectangle centroid is h/2; void centroids are at voidCenterDepth
+      const grossMoment = bf * h * (h / 2);
+      const voidMoment = voidA * voidCenterDepth;
+      yCg = (grossMoment - voidMoment) / A;
+      // Moment of inertia: gross rectangle minus voids (parallel axis theorem)
+      const grossI = (bf * Math.pow(h, 3)) / 12 + bf * h * Math.pow(h / 2 - yCg, 2);
+      const voidIself = numVoids * (Math.PI * Math.pow(r, 4)) / 4;
+      const voidIpar = voidA * Math.pow(voidCenterDepth - yCg, 2);
+      Ig = grossI - voidIself - voidIpar;
+      break;
+    }
+
+    default: {
+      // Fallback to rectangular using bf × h
+      const b = section.bf || section.bw;
+      A = b * h;
+      yCg = h / 2;
+      Ig = (b * Math.pow(h, 3)) / 12;
+    }
+  }
+
+  const yb = h - yCg;
+  const Sb = Ig / yb;
+
+  return { A, yCg, Ig, yb, Sb };
+}
+
+/**
+ * Compute prestress force, eccentricity, cracking moment, and the 1.2Mcr check.
+ *
+ * Prestress force P = Σ(fse_i × As_i)  for layers with fse > 0
+ * Eccentricity e = y_ps - y_cg  (positive when below centroid)
+ *   where y_ps is the centroid of prestress force from top
+ * Average precompressive stress f_pc = P / A
+ * Modulus of rupture f_r = 7.5 √(f'c)  in psi → converted to ksi
+ * Cracking moment Mcr = Sb × (fr + P/A + P×e/Sb)
+ *
+ * @returns { P, fpc, e, fr, Mcr, McrFt, phiMnOverMcr, passesMinStrength, sectionProps }
+ */
+export function prestressAndCracking(section, steelLayers, phiMn) {
+  const sectionProps = grossSectionProperties(section);
+  const { A, yCg, Sb } = sectionProps;
+
+  // Effective prestress force: only layers with fse > 0
+  let P = 0;
+  let PeMoment = 0; // Σ(fse_i × As_i × d_i)
+  for (const layer of steelLayers) {
+    if (layer.fse > 0) {
+      const force = layer.fse * layer.area;
+      P += force;
+      PeMoment += force * layer.depth;
+    }
+  }
+
+  // Eccentricity of prestress centroid from section centroid
+  // e > 0 means prestress centroid is below section centroid (typical)
+  const yps = P > 0 ? PeMoment / P : yCg;
+  const e = yps - yCg;
+
+  // Average precompressive stress
+  const fpc = P / A;
+
+  // Modulus of rupture: fr = 7.5√f'c (psi units) → convert to ksi
+  // f'c is in ksi, so f'c_psi = fc × 1000
+  const fc = section.fc;
+  const fr = 7.5 * Math.sqrt(fc * 1000) / 1000; // ksi
+
+  // Cracking moment: Mcr = Sb × (fr + P/A + P×e/Sb)
+  // = Sb × fr + Sb × P/A + P × e
+  const Mcr = Sb * (fr + P / A + P * e / Sb);
+  const McrFt = Mcr / 12;
+
+  // 1.2Mcr check: φMn ≥ 1.2Mcr
+  const threshold = 1.2 * Mcr;
+  const thresholdFt = threshold / 12;
+  const passesMinStrength = phiMn >= threshold;
+
+  return {
+    P,
+    fpc,
+    e,
+    yps,
+    fr,
+    Mcr,
+    McrFt,
+    threshold,
+    thresholdFt,
+    passesMinStrength,
+    sectionProps,
+  };
 }

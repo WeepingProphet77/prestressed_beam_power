@@ -542,6 +542,244 @@ export default async function generatePdfReport(results, section, info) {
   y += 28;
 
   // ═════════════════════════════════════════════════════════════════════════
+  // PRESTRESS & CRACKING ANALYSIS
+  // ═════════════════════════════════════════════════════════════════════════
+
+  if (results.cracking) {
+    const cr = results.cracking;
+    const sp = cr.sectionProps;
+
+    drawSectionHeading('Prestress & Cracking Analysis');
+
+    // Detail rows for prestress data
+    const prestressData = [
+      {
+        label: (lx, ly) => {
+          doc.text('Gross section area, ', lx, ly);
+          const w = doc.getTextWidth('Gross section area, ');
+          drawSub(doc, 'A', 'g', lx + w, ly);
+        },
+        value: `${sp.A.toFixed(2)} in\u00B2`,
+      },
+      {
+        label: (lx, ly) => {
+          doc.text('Gross moment of inertia, ', lx, ly);
+          const w = doc.getTextWidth('Gross moment of inertia, ');
+          drawSub(doc, 'I', 'g', lx + w, ly);
+        },
+        valueFn: (vx, vy) => {
+          const txt = `${sp.Ig.toFixed(1)} in`;
+          doc.text(txt, vx, vy, { align: 'right' });
+          drawSup(doc, '', '4', vx, vy);
+        },
+      },
+      {
+        label: (lx, ly) => {
+          doc.text('Section modulus (bottom), ', lx, ly);
+          const w = doc.getTextWidth('Section modulus (bottom), ');
+          drawSub(doc, 'S', 'b', lx + w, ly);
+        },
+        value: `${sp.Sb.toFixed(2)} in\u00B3`,
+      },
+      {
+        label: (lx, ly) => {
+          doc.text('Effective prestress force, ', lx, ly);
+          const w = doc.getTextWidth('Effective prestress force, ');
+          drawSub(doc, 'P', 'e', lx + w, ly);
+        },
+        value: `${cr.P.toFixed(2)} kips`,
+      },
+      {
+        label: (lx, ly) => {
+          let px = lx;
+          doc.text('Avg. precompressive stress, ', px, ly);
+          px += doc.getTextWidth('Avg. precompressive stress, ');
+          px += drawSub(doc, 'f', 'pc', px, ly);
+          doc.text(' = ', px, ly); px += doc.getTextWidth(' = ');
+          px += drawSub(doc, 'P', 'e', px, ly);
+          doc.text(' / ', px, ly); px += doc.getTextWidth(' / ');
+          drawSub(doc, 'A', 'g', px, ly);
+        },
+        value: `${cr.fpc.toFixed(4)} ksi`,
+      },
+      {
+        label: (lx, ly) => { doc.text('Prestress eccentricity, e', lx, ly); },
+        value: `${cr.e.toFixed(3)} in`,
+      },
+      {
+        label: (lx, ly) => {
+          let px = lx;
+          doc.text('Modulus of rupture, ', px, ly);
+          px += doc.getTextWidth('Modulus of rupture, ');
+          drawSub(doc, 'f', 'r', px, ly);
+        },
+        value: `${cr.fr.toFixed(4)} ksi`,
+      },
+      {
+        label: (lx, ly) => {
+          doc.text('Cracking moment, ', lx, ly);
+          const w = doc.getTextWidth('Cracking moment, ');
+          drawSub(doc, 'M', 'cr', lx + w, ly);
+        },
+        value: `${cr.McrFt.toFixed(1)} kip-ft`,
+      },
+      {
+        label: (lx, ly) => {
+          let px = lx;
+          doc.text('1.2 ', px, ly);
+          px += doc.getTextWidth('1.2 ');
+          drawSub(doc, 'M', 'cr', px, ly);
+        },
+        value: `${cr.thresholdFt.toFixed(1)} kip-ft`,
+      },
+    ];
+
+    prestressData.forEach((row, i) => {
+      ensureSpace(rowH);
+      if (i % 2 === 0) {
+        doc.setFillColor(...slate100);
+        doc.rect(tblLeft, y, cw, rowH, 'F');
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...slate600);
+      row.label(tblLeft + 8, y + 13.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...slate800);
+      if (row.valueFn) {
+        row.valueFn(tblRight - 8, y + 13.5);
+      } else {
+        doc.text(sanitize(row.value), tblRight - 8, y + 13.5, { align: 'right' });
+      }
+      y += rowH;
+    });
+
+    doc.setDrawColor(...slate200);
+    doc.line(tblLeft, y, tblRight, y);
+    y += 10;
+
+    // Equation block for prestress & cracking
+    const crEqH = 142;
+    ensureSpace(crEqH + 10);
+    doc.setFillColor(...slate100);
+    doc.setDrawColor(...slate200);
+    doc.roundedRect(MG, y, cw, crEqH, 4, 4, 'FD');
+
+    const crx0 = MG + 10;
+    let cry = y + 14;
+    const crGap = 32;
+
+    const drawCrFormulaTitle = (title) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...slate600);
+      drawGreek(doc, title, crx0, cry);
+    };
+
+    const drawCrFormulaExpr = (renderFn) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...slate800);
+      renderFn(crx0 + 4, cry + 14);
+    };
+
+    const drawCrFormulaNote = (note) => {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(...slate400);
+      drawGreek(doc, note, crx0 + 8, cry + 24);
+    };
+
+    // Equation 1: Average Precompressive Stress
+    drawCrFormulaTitle('Average Precompressive Stress:');
+    drawCrFormulaExpr((ex, ey) => {
+      let px = ex;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...blueLabel);
+      px += drawSub(doc, 'f', 'pc', px, ey);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate800);
+      doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
+      px += drawSub(doc, 'P', 'e', px, ey);
+      doc.text(' / ', px, ey); px += doc.getTextWidth(' / ');
+      px += drawSub(doc, 'A', 'g', px, ey);
+      doc.text(` = ${cr.fpc.toFixed(4)} ksi`, px, ey);
+    });
+    cry += crGap;
+
+    // Equation 2: Modulus of Rupture
+    drawCrFormulaTitle('Modulus of Rupture (ACI 318 Sec. 19.2.3):');
+    drawCrFormulaExpr((ex, ey) => {
+      let px = ex;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...blueLabel);
+      px += drawSub(doc, 'f', 'r', px, ey);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate800);
+      doc.text(" = 7.5 sqrt(f'", px, ey); px += doc.getTextWidth(" = 7.5 sqrt(f'");
+      px += drawSub(doc, '', 'c', px, ey);
+      doc.text(`) = ${cr.fr.toFixed(4)} ksi`, px, ey);
+    });
+    drawCrFormulaNote("f'c in psi for this equation");
+    cry += crGap;
+
+    // Equation 3: Cracking Moment
+    drawCrFormulaTitle('Cracking Moment (ACI 318 Sec. 24.2.3.5):');
+    drawCrFormulaExpr((ex, ey) => {
+      let px = ex;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...blueLabel);
+      px += drawSub(doc, 'M', 'cr', px, ey);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate800);
+      doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
+      px += drawSub(doc, 'S', 'b', px, ey);
+      doc.text(' (', px, ey); px += doc.getTextWidth(' (');
+      px += drawSub(doc, 'f', 'r', px, ey);
+      doc.text(' + ', px, ey); px += doc.getTextWidth(' + ');
+      px += drawSub(doc, 'P', 'e', px, ey);
+      doc.text('/', px, ey); px += doc.getTextWidth('/');
+      px += drawSub(doc, 'A', 'g', px, ey);
+      doc.text(' + ', px, ey); px += doc.getTextWidth(' + ');
+      px += drawSub(doc, 'P', 'e', px, ey);
+      doc.text('\u00B7e / ', px, ey); px += doc.getTextWidth('\u00B7e / ');
+      px += drawSub(doc, 'S', 'b', px, ey);
+      doc.text(`) = ${cr.McrFt.toFixed(1)} kip-ft`, px, ey);
+    });
+    cry += crGap;
+
+    // Equation 4: 1.2Mcr check
+    drawCrFormulaTitle('Minimum Flexural Strength (ACI 318 Sec. 9.6.2.2):');
+    drawCrFormulaExpr((ex, ey) => {
+      let px = ex;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...blueLabel);
+      px += drawGreek(doc, '\u03C6', px, ey);
+      px += drawSub(doc, 'M', 'n', px, ey);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate800);
+      doc.text(' >= 1.2 ', px, ey); px += doc.getTextWidth(' >= 1.2 ');
+      px += drawSub(doc, 'M', 'cr', px, ey);
+      doc.text(`     ${phiMnFt.toFixed(1)}`, px, ey); px += doc.getTextWidth(`     ${phiMnFt.toFixed(1)}`);
+      doc.text(` ${cr.passesMinStrength ? '>=' : '<'} ${cr.thresholdFt.toFixed(1)} kip-ft`, px, ey);
+      px += doc.getTextWidth(` ${cr.passesMinStrength ? '>=' : '<'} ${cr.thresholdFt.toFixed(1)} kip-ft`);
+      doc.text('  ', px, ey); px += doc.getTextWidth('  ');
+      if (cr.passesMinStrength) {
+        doc.setTextColor(...green600);
+        doc.setFont('helvetica', 'bold');
+        doc.text('OK', px, ey);
+      } else {
+        doc.setTextColor(...red600);
+        doc.setFont('helvetica', 'bold');
+        doc.text('FAILS', px, ey);
+      }
+    });
+
+    y += crEqH + 16;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
   // FORMULAS REFERENCE
   // ═════════════════════════════════════════════════════════════════════════
 
