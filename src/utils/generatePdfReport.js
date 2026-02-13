@@ -338,25 +338,43 @@ export default async function generatePdfReport(results, section, info) {
   };
 
   // ═════════════════════════════════════════════════════════════════════════
-  // SECTION ANALYSIS TABLE
+  // SECTION FLEXURAL STRENGTH
   // ═════════════════════════════════════════════════════════════════════════
 
-  drawSectionHeading('Section Analysis');
+  drawSectionHeading('Section Flexural Strength');
 
   const tblLeft = MG;
   const tblRight = MG + cw;
   const rowH = 20;
 
-  // Each row: [ labelFn(doc, x, y), valueFn(doc, x, y) ]
-  // Using functions so we can render Greek inline.
+  // Find extreme tension layer for evaluated formula display
+  let extremeLayer = results.layerResults[0];
+  for (const lr of results.layerResults) {
+    if (lr.depth > extremeLayer.depth) extremeLayer = lr;
+  }
+  const etl = extremeLayer;
+  const epsilonTy = etl ? etl.steel.fpy / etl.steel.Es : 0.002;
+
+  // Data table rows
   const detailData = [
+    {
+      label: (lx, ly) => {
+        doc.text("f'", lx, ly);
+        const w = doc.getTextWidth("f'");
+        drawSub(doc, '', 'c', lx + w, ly);
+      },
+      value: `${results.fc} ksi`,
+    },
+    {
+      label: (lx, ly) => { drawSub(doc, '\u03B2', '1', lx, ly); },
+      value: results.beta1.toFixed(3),
+    },
     {
       label: (lx, ly) => { doc.text('Neutral axis depth, c', lx, ly); },
       value: `${results.c.toFixed(3)} in`,
     },
     {
       label: (lx, ly) => {
-        // "Whitney stress block depth, a = β₁·c"
         let cx2 = lx;
         doc.text('Whitney stress block depth, a = ', lx, ly);
         cx2 += doc.getTextWidth('Whitney stress block depth, a = ');
@@ -364,10 +382,6 @@ export default async function generatePdfReport(results, section, info) {
         doc.text('\u00B7c', cx2, ly);
       },
       value: `${results.a.toFixed(3)} in`,
-    },
-    {
-      label: (lx, ly) => { drawSub(doc, '\u03B2', '1', lx, ly); },
-      value: results.beta1.toFixed(3),
     },
     {
       label: (lx, ly) => {
@@ -391,12 +405,50 @@ export default async function generatePdfReport(results, section, info) {
     },
     {
       label: (lx, ly) => {
-        // f'c
-        doc.text("f'", lx, ly);
-        const w = doc.getTextWidth("f'");
-        drawSub(doc, '', 'c', lx + w, ly);
+        let cx2 = lx;
+        doc.text('Net tensile strain, ', lx, ly);
+        cx2 += doc.getTextWidth('Net tensile strain, ');
+        drawSub(doc, '\u03B5', 't', cx2, ly);
       },
-      value: `${results.fc} ksi`,
+      value: epsilonT.toFixed(6),
+    },
+    {
+      label: (lx, ly) => {
+        let cx2 = lx;
+        doc.text('Yield strain, ', lx, ly);
+        cx2 += doc.getTextWidth('Yield strain, ');
+        cx2 += drawSub(doc, '\u03B5', 'ty', cx2, ly);
+        doc.text(' = ', cx2, ly); cx2 += doc.getTextWidth(' = ');
+        cx2 += drawSub(doc, 'f', 'py', cx2, ly);
+        doc.text(' / ', cx2, ly); cx2 += doc.getTextWidth(' / ');
+        drawSub(doc, 'E', 's', cx2, ly);
+      },
+      value: epsilonTy.toFixed(6),
+    },
+    {
+      label: (lx, ly) => {
+        let cx2 = lx;
+        doc.text('Strength reduction, ', lx, ly);
+        cx2 += doc.getTextWidth('Strength reduction, ');
+        drawGreek(doc, '\u03C6', cx2, ly);
+      },
+      value: phi.toFixed(3),
+    },
+    {
+      label: (lx, ly) => {
+        const tw = drawSub(doc, 'M', 'n', lx, ly);
+        doc.text(' (Nominal Strength)', lx + tw, ly);
+      },
+      value: `${MnFt.toFixed(1)} kip-ft (${Mn.toFixed(1)} kip-in)`,
+    },
+    {
+      label: (lx, ly) => {
+        let cx2 = lx;
+        cx2 += drawGreek(doc, '\u03C6', lx, ly);
+        cx2 += drawSub(doc, 'M', 'n', cx2, ly);
+        doc.text(' (Design Strength)', cx2, ly);
+      },
+      value: `${phiMnFt.toFixed(1)} kip-ft (${phiMn.toFixed(1)} kip-in)`,
     },
   ];
 
@@ -406,12 +458,10 @@ export default async function generatePdfReport(results, section, info) {
       doc.setFillColor(...slate100);
       doc.rect(tblLeft, y, cw, rowH, 'F');
     }
-    // Label
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...slate600);
     row.label(tblLeft + 8, y + 13.5);
-    // Value
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...slate800);
@@ -421,7 +471,142 @@ export default async function generatePdfReport(results, section, info) {
 
   doc.setDrawColor(...slate200);
   doc.line(tblLeft, y, tblRight, y);
-  y += 16;
+  y += 10;
+
+  // Evaluated equations block
+  const flexEqH = 206;
+  ensureSpace(flexEqH + 10);
+  doc.setFillColor(...slate100);
+  doc.setDrawColor(...slate200);
+  doc.roundedRect(MG, y, cw, flexEqH, 4, 4, 'FD');
+
+  const ffx0 = MG + 10;
+  let ffy = y + 14;
+  const ffGap = 50;
+
+  const drawFlexTitle = (title) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...slate600);
+    drawGreek(doc, title, ffx0, ffy);
+  };
+
+  const drawFlexExpr = (renderFn, offsetY) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...slate800);
+    renderFn(ffx0 + 4, ffy + (offsetY || 14));
+  };
+
+  const drawFlexNote = (note, offsetY) => {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(...slate400);
+    drawGreek(doc, note, ffx0 + 8, ffy + (offsetY || 24));
+  };
+
+  // Formula 1: Power Formula
+  drawFlexTitle('Power Formula (Devalapura-Tadros / PCI):');
+  drawFlexExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawSub(doc, 'f', 's', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
+    px += drawSub(doc, 'E', 's', px, ey);
+    doc.text('\u00B7', px, ey); px += doc.getTextWidth('\u00B7');
+    px += drawSub(doc, '\u03B5', 's', px, ey);
+    doc.text(' [ Q + (1 - Q) / [1 + (', px, ey); px += doc.getTextWidth(' [ Q + (1 - Q) / [1 + (');
+    px += drawSub(doc, 'E', 's', px, ey);
+    doc.text('\u00B7', px, ey); px += doc.getTextWidth('\u00B7');
+    px += drawSub(doc, '\u03B5', 's', px, ey);
+    doc.text(' / K\u00B7', px, ey); px += doc.getTextWidth(' / K\u00B7');
+    px += drawSub(doc, 'f', 'py', px, ey);
+    px += drawSup(doc, ')', 'R', px, ey);
+    px += drawSup(doc, ']', '1/R', px, ey);
+    doc.text(' ]', px, ey); px += doc.getTextWidth(' ]');
+    doc.text('  <=  ', px, ey); px += doc.getTextWidth('  <=  ');
+    drawSub(doc, 'f', 'pu', px, ey);
+  });
+  if (etl) {
+    drawFlexExpr((ex, ey) => {
+      doc.text(`= ${etl.stress.toFixed(2)} ksi  (extreme tension layer)`, ex, ey);
+    }, 26);
+  }
+  ffy += ffGap;
+
+  // Formula 2: Strain Compatibility
+  drawFlexTitle('Strain Compatibility (ACI 318):');
+  drawFlexExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawSub(doc, '\u03B5', 'si', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
+    px += drawSub(doc, '\u03B5', 'cu', px, ey);
+    doc.text('\u00B7(', px, ey); px += doc.getTextWidth('\u00B7(');
+    px += drawSub(doc, 'd', 'i', px, ey);
+    doc.text(' / c - 1) + ', px, ey); px += doc.getTextWidth(' / c - 1) + ');
+    px += drawSub(doc, 'f', 'se', px, ey);
+    doc.text(' / ', px, ey); px += doc.getTextWidth(' / ');
+    drawSub(doc, 'E', 's', px, ey);
+  });
+  if (etl) {
+    drawFlexExpr((ex, ey) => {
+      doc.text(`= 0.003\u00B7(${etl.depth.toFixed(2)} / ${results.c.toFixed(3)} - 1) + ${(etl.fse || 0).toFixed(1)} / ${etl.steel.Es.toLocaleString()} = ${etl.strain.toFixed(6)}`, ex, ey);
+    }, 26);
+  }
+  drawFlexNote('\u03B5cu = 0.003 per ACI 318', 38);
+  ffy += ffGap;
+
+  // Formula 3: Whitney Stress Block
+  drawFlexTitle('Whitney Stress Block (ACI 318 Sec. 22.2):');
+  drawFlexExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawSub(doc, 'C', 'c', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(" = 0.85\u00B7f'", px, ey); px += doc.getTextWidth(" = 0.85\u00B7f'");
+    px += drawSub(doc, '', 'c', px, ey);
+    doc.text('\u00B7a\u00B7b', px, ey); px += doc.getTextWidth('\u00B7a\u00B7b');
+    doc.text('     where  a = ', px, ey); px += doc.getTextWidth('     where  a = ');
+    px += drawSub(doc, '\u03B2', '1', px, ey);
+    doc.text('\u00B7c', px, ey);
+  });
+  drawFlexExpr((ex, ey) => {
+    doc.text(`a = ${results.beta1.toFixed(3)} x ${results.c.toFixed(3)} = ${results.a.toFixed(3)} in`, ex, ey);
+    const lineW = doc.getTextWidth(`a = ${results.beta1.toFixed(3)} x ${results.c.toFixed(3)} = ${results.a.toFixed(3)} in`);
+    doc.text(`     = ${results.Cc.toFixed(2)} kips`, ex + lineW, ey);
+  }, 26);
+  ffy += ffGap;
+
+  // Formula 4: Strength Reduction φ
+  drawFlexTitle('Strength Reduction \u03C6 (ACI 318 Sec. 21.2):');
+  drawFlexExpr((ex, ey) => {
+    let px = ex;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blueLabel);
+    px += drawGreek(doc, '\u03C6', px, ey);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate800);
+    doc.text(' = 0.65 + 0.25\u00B7(', px, ey); px += doc.getTextWidth(' = 0.65 + 0.25\u00B7(');
+    px += drawSub(doc, '\u03B5', 't', px, ey);
+    doc.text(' - ', px, ey); px += doc.getTextWidth(' - ');
+    px += drawSub(doc, '\u03B5', 'ty', px, ey);
+    doc.text(') / 0.003', px, ey);
+  });
+  drawFlexExpr((ex, ey) => {
+    doc.text(`= 0.65 + 0.25\u00B7(${epsilonT.toFixed(6)} - ${epsilonTy.toFixed(6)}) / 0.003 = ${phi.toFixed(3)}`, ex, ey);
+  }, 26);
+  drawFlexNote('0.65 <= \u03C6 <= 0.90', 38);
+
+  y += flexEqH + 16;
 
   // ═════════════════════════════════════════════════════════════════════════
   // STEEL LAYER RESULTS TABLE
@@ -778,129 +963,6 @@ export default async function generatePdfReport(results, section, info) {
 
     y += crEqH + 16;
   }
-
-  // ═════════════════════════════════════════════════════════════════════════
-  // FORMULAS REFERENCE
-  // ═════════════════════════════════════════════════════════════════════════
-
-  drawSectionHeading('Formulas Used');
-
-  const formulaBlockH = 148;
-  ensureSpace(formulaBlockH + 16);
-  doc.setFillColor(...slate100);
-  doc.setDrawColor(...slate200);
-  doc.roundedRect(MG, y, cw, formulaBlockH, 4, 4, 'FD');
-
-  const fx0 = MG + 10;
-  let fy = y + 14;
-  const formulaGap = 36;
-
-  const drawFormulaTitle = (title) => {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(...slate600);
-    drawGreek(doc, title, fx0, fy);
-  };
-
-  const drawFormulaExpr = (renderFn) => {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...slate800);
-    renderFn(fx0 + 4, fy + 14);
-  };
-
-  const drawFormulaNote = (note) => {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7);
-    doc.setTextColor(...slate400);
-    drawGreek(doc, note, fx0 + 8, fy + 24);
-  };
-
-  // Formula 1: Power Formula
-  drawFormulaTitle('Power Formula (Devalapura-Tadros / PCI):');
-  drawFormulaExpr((ex, ey) => {
-    let px = ex;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...blueLabel);
-    px += drawSub(doc, 'f', 's', px, ey);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...slate800);
-    doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
-    px += drawSub(doc, 'E', 's', px, ey);
-    doc.text('\u00B7', px, ey); px += doc.getTextWidth('\u00B7');
-    px += drawSub(doc, '\u03B5', 's', px, ey);
-    doc.text(' [ Q + (1 - Q) / [1 + (', px, ey); px += doc.getTextWidth(' [ Q + (1 - Q) / [1 + (');
-    px += drawSub(doc, 'E', 's', px, ey);
-    doc.text('\u00B7', px, ey); px += doc.getTextWidth('\u00B7');
-    px += drawSub(doc, '\u03B5', 's', px, ey);
-    doc.text(' / K\u00B7', px, ey); px += doc.getTextWidth(' / K\u00B7');
-    px += drawSub(doc, 'f', 'py', px, ey);
-    px += drawSup(doc, ')', 'R', px, ey);
-    px += drawSup(doc, ']', '1/R', px, ey);
-    doc.text(' ]', px, ey); px += doc.getTextWidth(' ]');
-    doc.text('  <=  ', px, ey); px += doc.getTextWidth('  <=  ');
-    drawSub(doc, 'f', 'pu', px, ey);
-  });
-  fy += formulaGap;
-
-  // Formula 2: Strain Compatibility
-  drawFormulaTitle('Strain Compatibility (ACI 318):');
-  drawFormulaExpr((ex, ey) => {
-    let px = ex;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...blueLabel);
-    px += drawSub(doc, '\u03B5', 'si', px, ey);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...slate800);
-    doc.text(' = ', px, ey); px += doc.getTextWidth(' = ');
-    px += drawSub(doc, '\u03B5', 'cu', px, ey);
-    doc.text('\u00B7(', px, ey); px += doc.getTextWidth('\u00B7(');
-    px += drawSub(doc, 'd', 'i', px, ey);
-    doc.text(' / c - 1) + ', px, ey); px += doc.getTextWidth(' / c - 1) + ');
-    px += drawSub(doc, 'f', 'se', px, ey);
-    doc.text(' / ', px, ey); px += doc.getTextWidth(' / ');
-    drawSub(doc, 'E', 's', px, ey);
-  });
-  drawFormulaNote('\u03B5cu = 0.003 per ACI 318');
-  fy += formulaGap;
-
-  // Formula 3: Whitney Stress Block
-  drawFormulaTitle('Whitney Stress Block (ACI 318 Sec. 22.2):');
-  drawFormulaExpr((ex, ey) => {
-    let px = ex;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...blueLabel);
-    px += drawSub(doc, 'C', 'c', px, ey);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...slate800);
-    doc.text(" = 0.85\u00B7f'", px, ey); px += doc.getTextWidth(" = 0.85\u00B7f'");
-    px += drawSub(doc, '', 'c', px, ey);
-    doc.text('\u00B7a\u00B7b', px, ey); px += doc.getTextWidth('\u00B7a\u00B7b');
-    doc.text('     where  a = ', px, ey); px += doc.getTextWidth('     where  a = ');
-    px += drawSub(doc, '\u03B2', '1', px, ey);
-    doc.text('\u00B7c', px, ey);
-  });
-  fy += formulaGap;
-
-  // Formula 4: Strength Reduction
-  drawFormulaTitle('Strength Reduction \u03C6 (ACI 318 Sec. 21.2):');
-  drawFormulaExpr((ex, ey) => {
-    let px = ex;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...blueLabel);
-    px += drawGreek(doc, '\u03C6', px, ey);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...slate800);
-    doc.text(' = 0.65 + 0.25\u00B7(', px, ey); px += doc.getTextWidth(' = 0.65 + 0.25\u00B7(');
-    px += drawSub(doc, '\u03B5', 't', px, ey);
-    doc.text(' - ', px, ey); px += doc.getTextWidth(' - ');
-    px += drawSub(doc, '\u03B5', 'ty', px, ey);
-    doc.text(') / 0.003', px, ey);
-  });
-  drawFormulaNote('0.65 <= \u03C6 <= 0.90');
-  fy += formulaGap;
-
-  y += formulaBlockH + 16;
 
   // ═════════════════════════════════════════════════════════════════════════
   // DIAGRAMS

@@ -29,6 +29,14 @@ export default function ResultsPanel({ results }) {
     ? { label: 'Transition Zone', cls: 'status-warn' }
     : { label: 'Compression-Controlled', cls: 'status-bad' };
 
+  // Find extreme tension layer (deepest) for evaluated formula display
+  let extremeLayer = layerResults[0];
+  for (const lr of layerResults) {
+    if (lr.depth > extremeLayer.depth) extremeLayer = lr;
+  }
+  const etl = extremeLayer;
+  const epsilonTy = etl ? etl.steel.fpy / etl.steel.Es : 0.002;
+
   return (
     <div className="results-panel">
       <h3>Analysis Results</h3>
@@ -57,11 +65,21 @@ export default function ResultsPanel({ results }) {
         </div>
       </div>
 
-      {/* Section Details */}
-      <div className="result-details">
-        <h4>Section Analysis</h4>
+      {/* Section Flexural Strength */}
+      <div className="result-details flexural-strength-section">
+        <h4>Section Flexural Strength</h4>
+
+        {/* Data table */}
         <table className="detail-table">
           <tbody>
+            <tr>
+              <td>f&#x2032;<sub>c</sub></td>
+              <td>{fc} ksi</td>
+            </tr>
+            <tr>
+              <td>&beta;<sub>1</sub></td>
+              <td>{beta1.toFixed(3)}</td>
+            </tr>
             <tr>
               <td>Neutral axis depth, c</td>
               <td>{c.toFixed(3)} in</td>
@@ -69,10 +87,6 @@ export default function ResultsPanel({ results }) {
             <tr>
               <td>Whitney stress block depth, a = &beta;<sub>1</sub>&middot;c</td>
               <td>{a.toFixed(3)} in</td>
-            </tr>
-            <tr>
-              <td>&beta;<sub>1</sub></td>
-              <td>{beta1.toFixed(3)}</td>
             </tr>
             <tr>
               <td>Concrete compression, C<sub>c</sub></td>
@@ -83,11 +97,121 @@ export default function ResultsPanel({ results }) {
               <td>{cOverD.toFixed(4)}</td>
             </tr>
             <tr>
-              <td>f&#x2032;<sub>c</sub></td>
-              <td>{fc} ksi</td>
+              <td>Net tensile strain, &epsilon;<sub>t</sub></td>
+              <td>{epsilonT.toFixed(6)}</td>
+            </tr>
+            <tr>
+              <td>Yield strain, &epsilon;<sub>ty</sub> = f<sub>py</sub> / E<sub>s</sub></td>
+              <td>{epsilonTy.toFixed(6)}</td>
+            </tr>
+            <tr>
+              <td>Strength reduction, &phi;</td>
+              <td>{phi.toFixed(3)}</td>
+            </tr>
+            <tr>
+              <td>M<sub>n</sub> (Nominal Strength)</td>
+              <td>{MnFt.toFixed(1)} kip-ft ({Mn.toFixed(1)} kip-in)</td>
+            </tr>
+            <tr>
+              <td>&phi;M<sub>n</sub> (Design Strength)</td>
+              <td>{phiMnFt.toFixed(1)} kip-ft ({phiMn.toFixed(1)} kip-in)</td>
             </tr>
           </tbody>
         </table>
+
+        {/* Evaluated equations */}
+        <div className="cracking-formulas">
+          {/* Power Formula */}
+          <div className="formula-block">
+            <div className="formula-title">Power Formula (Devalapura&#8211;Tadros / PCI):</div>
+            <div className="formula">
+              <span className="formula-lhs">f<sub>s</sub></span> ={' '}
+              E<sub>s</sub>&#8239;&epsilon;<sub>s</sub>{' '}
+              <span className="formula-bracket">[</span>{' '}
+              Q + <span className="formula-frac"><span className="formula-num">1 &minus; Q</span><span className="formula-denom">[1 + (E<sub>s</sub>&epsilon;<sub>s</sub> / K f<sub>py</sub>)<sup>R</sup>]<sup>1/R</sup></span></span>{' '}
+              <span className="formula-bracket">]</span>{' '}
+              &le; f<sub>pu</sub>
+            </div>
+            {etl && (
+              <>
+                <div className="formula">
+                  <span className="formula-lhs" style={{visibility: 'hidden'}}>f<sub>s</sub></span> ={' '}
+                  {etl.steel.Es.toLocaleString()}&#8239;({etl.strain.toFixed(6)}){' '}
+                  [ {etl.steel.Q} + (1 &minus; {etl.steel.Q}) / [1 + ({etl.steel.Es.toLocaleString()} &times; {etl.strain.toFixed(6)} / {etl.steel.K} &times; {etl.steel.fpy})<sup>{etl.steel.R}</sup>]<sup>1/{etl.steel.R}</sup> ]
+                </div>
+                <div className="formula">
+                  <span className="formula-lhs" style={{visibility: 'hidden'}}>f<sub>s</sub></span> ={' '}
+                  {etl.stress.toFixed(2)} ksi
+                  <span className="formula-note" style={{display: 'inline', marginLeft: '0.75rem'}}>
+                    (extreme tension layer)
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Strain Compatibility */}
+          <div className="formula-block">
+            <div className="formula-title">Strain Compatibility (ACI 318):</div>
+            <div className="formula">
+              <span className="formula-lhs">&epsilon;<sub>si</sub></span> ={' '}
+              &epsilon;<sub>cu</sub>&#8239;(d<sub>i</sub> / c &minus; 1) + f<sub>se</sub> / E<sub>s</sub>
+            </div>
+            {etl && (
+              <>
+                <div className="formula">
+                  <span className="formula-lhs" style={{visibility: 'hidden'}}>&epsilon;<sub>si</sub></span> ={' '}
+                  0.003&#8239;({etl.depth.toFixed(2)} / {c.toFixed(3)} &minus; 1) + {(etl.fse || 0).toFixed(1)} / {etl.steel.Es.toLocaleString()}
+                </div>
+                <div className="formula">
+                  <span className="formula-lhs" style={{visibility: 'hidden'}}>&epsilon;<sub>si</sub></span> ={' '}
+                  {etl.strain.toFixed(6)}
+                  <span className="formula-note" style={{display: 'inline', marginLeft: '0.75rem'}}>
+                    (extreme tension layer)
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="formula-note">&epsilon;<sub>cu</sub> = 0.003 per ACI 318</div>
+          </div>
+
+          {/* Whitney Stress Block */}
+          <div className="formula-block">
+            <div className="formula-title">Whitney Stress Block (ACI 318 &sect;22.2):</div>
+            <div className="formula">
+              <span className="formula-lhs">C<sub>c</sub></span> ={' '}
+              0.85&#8239;f&#x2032;<sub>c</sub>&#8239;a&#8239;b
+              <span style={{marginLeft: '1rem'}}>where</span>{' '}
+              a = &beta;<sub>1</sub>&#8239;c
+            </div>
+            <div className="formula">
+              <span className="formula-lhs" style={{visibility: 'hidden'}}>C<sub>c</sub></span>{' '}
+              a = {beta1.toFixed(3)} &times; {c.toFixed(3)} = {a.toFixed(3)} in
+            </div>
+            <div className="formula">
+              <span className="formula-lhs" style={{visibility: 'hidden'}}>C<sub>c</sub></span> ={' '}
+              {Cc.toFixed(2)} kips
+            </div>
+          </div>
+
+          {/* Strength Reduction φ */}
+          <div className="formula-block">
+            <div className="formula-title">Strength Reduction &phi; (ACI 318 &sect;21.2):</div>
+            <div className="formula">
+              <span className="formula-lhs">&phi;</span> ={' '}
+              0.65 + 0.25&#8239;(&epsilon;<sub>t</sub> &minus; &epsilon;<sub>ty</sub>) / 0.003
+            </div>
+            <div className="formula">
+              <span className="formula-lhs" style={{visibility: 'hidden'}}>&phi;</span> ={' '}
+              0.65 + 0.25&#8239;({epsilonT.toFixed(6)} &minus; {epsilonTy.toFixed(6)}) / 0.003
+            </div>
+            <div className="formula">
+              <span className="formula-lhs" style={{visibility: 'hidden'}}>&phi;</span> ={' '}
+              {phi.toFixed(3)}
+            </div>
+            <div className="formula-note">0.65 &le; &phi; &le; 0.90</div>
+          </div>
+        </div>
       </div>
 
       {/* Steel Layer Table */}
@@ -262,48 +386,6 @@ export default function ResultsPanel({ results }) {
         </div>
       )}
 
-      {/* Formulas Reference */}
-      <div className="result-details formulas-ref">
-        <h4>Formulas Used</h4>
-        <div className="formula-block">
-          <div className="formula-title">Power Formula (Devalapura&#8211;Tadros / PCI):</div>
-          <div className="formula">
-            <span className="formula-lhs">f<sub>s</sub></span> ={' '}
-            E<sub>s</sub>&#8239;&epsilon;<sub>s</sub>{' '}
-            <span className="formula-bracket">[</span>{' '}
-            Q + <span className="formula-frac"><span className="formula-num">1 &minus; Q</span><span className="formula-denom">[1 + (E<sub>s</sub>&epsilon;<sub>s</sub> / K f<sub>py</sub>)<sup>R</sup>]<sup>1/R</sup></span></span>{' '}
-            <span className="formula-bracket">]</span>{' '}
-            &le; f<sub>pu</sub>
-          </div>
-        </div>
-        <div className="formula-block">
-          <div className="formula-title">Strain Compatibility (ACI 318):</div>
-          <div className="formula">
-            <span className="formula-lhs">&epsilon;<sub>si</sub></span> ={' '}
-            &epsilon;<sub>cu</sub>&#8239;(d<sub>i</sub> / c &minus; 1) + f<sub>se</sub> / E<sub>s</sub>
-          </div>
-          <div className="formula-note">&epsilon;<sub>cu</sub> = 0.003 per ACI 318</div>
-        </div>
-        <div className="formula-block">
-          <div className="formula-title">Whitney Stress Block (ACI 318 &sect;22.2):</div>
-          <div className="formula">
-            <span className="formula-lhs">C<sub>c</sub></span> ={' '}
-            0.85&#8239;f&#x2032;<sub>c</sub>&#8239;a&#8239;b
-          </div>
-          <div className="formula">
-            <span className="formula-lhs" style={{visibility: 'hidden'}}>C<sub>c</sub></span>{' '}
-            where a = &beta;<sub>1</sub>&#8239;c
-          </div>
-        </div>
-        <div className="formula-block">
-          <div className="formula-title">Strength Reduction &phi; (ACI 318 &sect;21.2):</div>
-          <div className="formula">
-            <span className="formula-lhs">&phi;</span> ={' '}
-            0.65 + 0.25&#8239;(&epsilon;<sub>t</sub> &minus; &epsilon;<sub>ty</sub>) / 0.003
-          </div>
-          <div className="formula-note">0.65 &le; &phi; &le; 0.90</div>
-        </div>
-      </div>
     </div>
   );
 }
