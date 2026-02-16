@@ -424,7 +424,189 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Results Panel
+   Design Gauges Dashboard
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.design-gauges {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 1.1rem 1.25rem 1rem;
+  border: 1px solid var(--slate-200);
+  margin-bottom: 1rem;
+}
+
+/* Hero value */
+.gauge-hero {
+  text-align: center;
+  padding: 0.9rem 0.5rem 1rem;
+  margin: -0.1rem -0.25rem 0.85rem;
+  background: linear-gradient(135deg, var(--blue-700), var(--blue-900));
+  border-radius: var(--radius);
+  color: #fff;
+}
+
+.gauge-hero .hero-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+  margin-bottom: 0.25rem;
+}
+
+.gauge-hero .hero-label sub {
+  font-size: 0.7em;
+}
+
+.gauge-hero .hero-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.gauge-hero .hero-unit {
+  font-size: 0.5em;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.gauge-hero .hero-sub {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin-top: 0.2rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.gauge-hero .hero-sub sub {
+  font-size: 0.7em;
+}
+
+/* Gauge grid */
+.gauge-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.gauge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0.25rem 0.4rem;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.gauge-item:hover {
+  box-shadow: var(--shadow);
+  border-color: var(--slate-300);
+}
+
+.gauge-value-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+.gauge-unit-text {
+  font-family: 'JetBrains Mono', monospace;
+  fill: var(--slate-400);
+  font-weight: 400;
+}
+
+.gauge-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--slate-600);
+  text-align: center;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  margin-top: 0.1rem;
+}
+
+.gauge-label sub {
+  font-size: 0.7em;
+}
+
+/* Status badges */
+.gauge-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.gauge-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 0;
+  min-width: 160px;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid;
+}
+
+.gauge-badge.badge-pass {
+  background: var(--green-50);
+  border-color: var(--green-500);
+}
+
+.gauge-badge.badge-warn {
+  background: var(--amber-50);
+  border-color: var(--amber-500);
+}
+
+.gauge-badge.badge-fail {
+  background: var(--red-50);
+  border-color: var(--red-500);
+}
+
+.badge-icon {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.badge-pass .badge-icon { color: var(--green-700); }
+.badge-warn .badge-icon { color: var(--amber-700); }
+.badge-fail .badge-icon { color: var(--red-700); }
+
+.badge-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.badge-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  line-height: 1.25;
+}
+
+.badge-label sub {
+  font-size: 0.7em;
+}
+
+.badge-detail {
+  font-size: 0.7rem;
+  color: var(--slate-500);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Results Panel (Collapsible Calculations)
    ══════════════════════════════════════════════════════════════════════════ */
 
 .results-panel {
@@ -438,103 +620,101 @@
 .results-panel h3 {
   font-size: 1rem;
   color: var(--slate-800);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.25rem;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--blue-500);
   letter-spacing: -0.01em;
 }
 
-/* Summary Cards */
-.result-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.65rem;
-  margin-bottom: 1rem;
+.results-collapse-hint {
+  font-size: 0.75rem;
+  color: var(--slate-400);
+  font-style: italic;
+  margin-bottom: 0.75rem;
 }
 
-.result-card {
-  background: var(--slate-50);
+/* Collapsible sections */
+.collapsible-section {
   border: 1px solid var(--slate-200);
   border-radius: var(--radius);
-  padding: 0.7rem 0.85rem;
-  text-align: center;
-  transition: box-shadow 0.2s;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  transition: border-color 0.2s;
 }
 
-.result-card:hover {
-  box-shadow: var(--shadow);
+.collapsible-section:last-child {
+  margin-bottom: 0;
 }
 
-.result-card.primary {
-  background: linear-gradient(135deg, var(--blue-600), var(--blue-800));
-  color: #fff;
+.collapsible-section:hover {
+  border-color: var(--slate-300);
+}
+
+.collapsible-section.is-open {
+  border-color: var(--blue-300);
+}
+
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  background: var(--slate-50);
   border: none;
-  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
 }
 
-.result-card.primary:hover {
-  box-shadow: var(--shadow-lg);
+.collapsible-header:hover {
+  background: var(--blue-50);
 }
 
-.result-card.primary .card-label {
-  color: rgba(255, 255, 255, 0.85);
+.collapsible-section.is-open .collapsible-header {
+  background: var(--blue-50);
+  border-bottom: 1px solid var(--blue-200);
 }
 
-.result-card.primary .card-sub {
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.result-card.status-good {
-  border-color: var(--green-500);
-  background: var(--green-50);
-}
-
-.result-card.status-warn {
-  border-color: var(--amber-500);
-  background: var(--amber-50);
-}
-
-.result-card.status-bad {
-  border-color: var(--red-500);
-  background: var(--red-50);
-}
-
-.card-label {
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: var(--slate-500);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.2rem;
-}
-
-.card-label sub {
-  font-size: 0.7em;
-}
-
-.card-value {
-  font-size: 1.3rem;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  line-height: 1.3;
-}
-
-.card-value.small {
-  font-size: 0.88rem;
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-}
-
-.card-sub {
-  font-size: 0.73rem;
+.collapsible-chevron {
+  font-size: 0.65rem;
   color: var(--slate-400);
-  margin-top: 0.1rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 400;
+  flex-shrink: 0;
+  transition: color 0.15s;
 }
 
-.card-sub sub {
-  font-size: 0.7em;
+.collapsible-header:hover .collapsible-chevron {
+  color: var(--blue-500);
+}
+
+.collapsible-header h4 {
+  font-size: 0.82rem;
+  color: var(--slate-700);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.collapsible-body {
+  padding: 0.75rem 0.85rem;
+  animation: collapseIn 0.2s ease;
+}
+
+@keyframes collapseIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.collapsible-body .result-details {
+  margin-bottom: 0;
+}
+
+.collapsible-body .flexural-strength-section,
+.collapsible-body .prestress-cracking-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
 }
 
 /* Detail Tables */
@@ -1161,11 +1341,15 @@
     max-width: none;
   }
 
-  .result-cards {
-    grid-template-columns: 1fr 1fr;
+  .gauge-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .card-value {
-    font-size: 1.05rem;
+  .gauge-hero .hero-value {
+    font-size: 1.6rem;
+  }
+
+  .gauge-badges {
+    flex-direction: column;
   }
 }
