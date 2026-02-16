@@ -4,6 +4,7 @@ import BeamDiagram from './components/BeamDiagram';
 import StressStrainChart from './components/StressStrainChart';
 import StrainDiagram from './components/StrainDiagram';
 import ResultsPanel from './components/ResultsPanel';
+import DesignGauges from './components/DesignGauges';
 import ExportDialog from './components/ExportDialog';
 import { analyzeBeam } from './utils/beamCalculations';
 import generatePdfReport from './utils/generatePdfReport';
@@ -116,6 +117,7 @@ export default function App() {
 
           {results && (
             <div className="results-column" ref={resultsRef}>
+              <DesignGauges results={results} />
               <ResultsPanel results={results} />
             </div>
           )}
