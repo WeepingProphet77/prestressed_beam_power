@@ -19,7 +19,8 @@ const GREEK = {
   '\u03C1': 'r', // ρ
   '\u03C3': 's', // σ
   '\u03C4': 't', // τ
-  '\u03C6': 'f', // φ
+  '\u03C6': 'f', // φ (curly)
+  '\u03D5': 'f', // ϕ (straight-line)
   '\u03C8': 'y', // ψ
   '\u03C9': 'w', // ω
 };
@@ -263,7 +264,7 @@ export default async function generatePdfReport(results, section, info) {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   // "φMn (Design Strength)" — rendered with Symbol for φ
-  drawGreek(doc, '\u03C6Mn (Design Strength)', MG + cardW / 2, y + 14, { align: 'center' });
+  drawGreek(doc, '\u03D5Mn (Design Strength)', MG + cardW / 2, y + 14, { align: 'center' });
   doc.setTextColor(...white);
   doc.setFontSize(16);
   doc.text(`${phiMnFt.toFixed(1)} kip-ft`, MG + cardW / 2, y + 34, { align: 'center' });
@@ -295,7 +296,7 @@ export default async function generatePdfReport(results, section, info) {
   doc.setTextColor(...slate400);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  drawGreek(doc, '\u03C6 Factor', c3x + cardW / 2, y + 14, { align: 'center' });
+  drawGreek(doc, '\u03D5 Factor', c3x + cardW / 2, y + 14, { align: 'center' });
   doc.setTextColor(...slate800);
   doc.setFontSize(16);
   doc.text(phi.toFixed(3), c3x + cardW / 2, y + 34, { align: 'center' });
@@ -430,7 +431,7 @@ export default async function generatePdfReport(results, section, info) {
         let cx2 = lx;
         doc.text('Strength reduction, ', lx, ly);
         cx2 += doc.getTextWidth('Strength reduction, ');
-        drawGreek(doc, '\u03C6', cx2, ly);
+        drawGreek(doc, '\u03D5', cx2, ly);
       },
       value: phi.toFixed(3),
     },
@@ -444,7 +445,7 @@ export default async function generatePdfReport(results, section, info) {
     {
       label: (lx, ly) => {
         let cx2 = lx;
-        cx2 += drawGreek(doc, '\u03C6', lx, ly);
+        cx2 += drawGreek(doc, '\u03D5', lx, ly);
         cx2 += drawSub(doc, 'M', 'n', cx2, ly);
         doc.text(' (Design Strength)', cx2, ly);
       },
@@ -587,12 +588,12 @@ export default async function generatePdfReport(results, section, info) {
   ffy += ffGap;
 
   // Formula 4: Strength Reduction φ
-  drawFlexTitle('Strength Reduction \u03C6 (ACI 318 Sec. 21.2):');
+  drawFlexTitle('Strength Reduction \u03D5 (ACI 318 Sec. 21.2):');
   drawFlexExpr((ex, ey) => {
     let px = ex;
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...blueLabel);
-    px += drawGreek(doc, '\u03C6', px, ey);
+    px += drawGreek(doc, '\u03D5', px, ey);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...slate800);
     doc.text(' = 0.65 + 0.25\u00B7(', px, ey); px += doc.getTextWidth(' = 0.65 + 0.25\u00B7(');
@@ -604,7 +605,7 @@ export default async function generatePdfReport(results, section, info) {
   drawFlexExpr((ex, ey) => {
     doc.text(`= 0.65 + 0.25\u00B7(${epsilonT.toFixed(6)} - ${epsilonTy.toFixed(6)}) / 0.003 = ${phi.toFixed(3)}`, ex, ey);
   }, 26);
-  drawFlexNote('0.65 <= \u03C6 <= 0.90', 38);
+  drawFlexNote('0.65 <= \u03D5 <= 0.90', 38);
 
   y += flexEqH + 16;
 
@@ -940,7 +941,7 @@ export default async function generatePdfReport(results, section, info) {
       let px = ex;
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...blueLabel);
-      px += drawGreek(doc, '\u03C6', px, ey);
+      px += drawGreek(doc, '\u03D5', px, ey);
       px += drawSub(doc, 'M', 'n', px, ey);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...slate800);
