@@ -484,52 +484,185 @@
   font-size: 0.7em;
 }
 
-/* Gauge grid */
-.gauge-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.85rem;
-}
-
-.gauge-item {
+/* ── Horizontal bar gauges ── */
+.hbar-gauges-stack {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 0.5rem 0.25rem 0.4rem;
-  background: var(--slate-50);
-  border: 1px solid var(--slate-200);
-  border-radius: var(--radius);
-  transition: box-shadow 0.2s, border-color 0.2s;
+  gap: 1.1rem;
+  margin-bottom: 1rem;
 }
 
-.gauge-item:hover {
-  box-shadow: var(--shadow);
-  border-color: var(--slate-300);
+.hbar-gauge {
+  position: relative;
+  padding: 0 0.15rem;
 }
 
-.gauge-value-text {
+.hbar-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.15rem;
+}
+
+.hbar-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  letter-spacing: 0.01em;
+}
+
+.hbar-title sub {
+  font-size: 0.7em;
+}
+
+.hbar-readout {
   font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
   font-weight: 700;
 }
 
-.gauge-unit-text {
-  font-family: 'JetBrains Mono', monospace;
-  fill: var(--slate-400);
-  font-weight: 400;
+.hbar-readout sub {
+  font-size: 0.7em;
 }
 
-.gauge-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--slate-600);
+/* Zone labels above the bar */
+.hbar-zone-labels {
+  position: relative;
+  height: 1rem;
+  margin-bottom: 0.1rem;
+}
+
+.hbar-zone-label {
+  position: absolute;
+  top: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   text-align: center;
-  letter-spacing: 0.02em;
-  line-height: 1.3;
-  margin-top: 0.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1rem;
 }
 
-.gauge-label sub {
+/* The track */
+.hbar-track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  overflow: visible;
+  background: var(--slate-200);
+}
+
+.hbar-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  opacity: 0.35;
+}
+
+.hbar-zone:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.hbar-zone:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+.hbar-zone:first-child:last-child {
+  border-radius: 7px;
+}
+
+/* Needle indicator */
+.hbar-needle {
+  position: absolute;
+  top: -4px;
+  height: calc(100% + 8px);
+  width: 0;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.hbar-needle-line {
+  position: absolute;
+  left: -1.5px;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  border-radius: 1.5px;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+.hbar-needle-diamond {
+  position: absolute;
+  left: -5px;
+  top: -6px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 7px solid;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.25));
+}
+
+/* Markers below the bar */
+.hbar-markers {
+  position: relative;
+  height: 2rem;
+  margin-top: 0.15rem;
+}
+
+.hbar-marker {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hbar-marker-tick {
+  width: 1px;
+  height: 6px;
+  background: var(--slate-400);
+}
+
+.hbar-marker-label {
+  font-size: 0.62rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--slate-500);
+  white-space: nowrap;
+  margin-top: 1px;
+  line-height: 1.2;
+}
+
+.hbar-marker-label sub {
+  font-size: 0.7em;
+}
+
+/* Needle callout - shown below markers */
+.hbar-needle-callout {
+  position: absolute;
+  bottom: -0.2rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.hbar-callout-text {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border: 1.5px solid;
+  border-radius: var(--radius-xs);
+  background: #fff;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.hbar-callout-text sub {
   font-size: 0.7em;
 }
 
@@ -1341,12 +1474,16 @@
     max-width: none;
   }
 
-  .gauge-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .gauge-hero .hero-value {
     font-size: 1.6rem;
+  }
+
+  .hbar-zone-label {
+    font-size: 0.55rem;
+  }
+
+  .hbar-marker-label {
+    font-size: 0.55rem;
   }
 
   .gauge-badges {

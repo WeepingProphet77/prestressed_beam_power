@@ -107,7 +107,7 @@ export default function ResultsPanel({ results }) {
                 <td>{epsilonTy.toFixed(6)}</td>
               </tr>
               <tr>
-                <td>Strength reduction, &phi;</td>
+                <td>Strength reduction, &#x03D5;</td>
                 <td>{phi.toFixed(3)}</td>
               </tr>
               <tr>
@@ -115,7 +115,7 @@ export default function ResultsPanel({ results }) {
                 <td>{MnFt.toFixed(1)} kip-ft ({Mn.toFixed(1)} kip-in)</td>
               </tr>
               <tr>
-                <td>&phi;M<sub>n</sub> (Design Strength)</td>
+                <td>&#x03D5;M<sub>n</sub> (Design Strength)</td>
                 <td>{phiMnFt.toFixed(1)} kip-ft ({phiMn.toFixed(1)} kip-in)</td>
               </tr>
             </tbody>
@@ -202,20 +202,20 @@ export default function ResultsPanel({ results }) {
 
             {/* Strength Reduction φ */}
             <div className="formula-block">
-              <div className="formula-title">Strength Reduction &phi; (ACI 318 &sect;21.2):</div>
+              <div className="formula-title">Strength Reduction &#x03D5; (ACI 318 &sect;21.2):</div>
               <div className="formula">
-                <span className="formula-lhs">&phi;</span> ={' '}
+                <span className="formula-lhs">&#x03D5;</span> ={' '}
                 0.65 + 0.25&#8239;(&epsilon;<sub>t</sub> &minus; &epsilon;<sub>ty</sub>) / 0.003
               </div>
               <div className="formula">
-                <span className="formula-lhs" style={{visibility: 'hidden'}}>&phi;</span> ={' '}
+                <span className="formula-lhs" style={{visibility: 'hidden'}}>&#x03D5;</span> ={' '}
                 0.65 + 0.25&#8239;({epsilonT.toFixed(6)} &minus; {epsilonTy.toFixed(6)}) / 0.003
               </div>
               <div className="formula">
-                <span className="formula-lhs" style={{visibility: 'hidden'}}>&phi;</span> ={' '}
+                <span className="formula-lhs" style={{visibility: 'hidden'}}>&#x03D5;</span> ={' '}
                 {phi.toFixed(3)}
               </div>
-              <div className="formula-note">0.65 &le; &phi; &le; 0.90</div>
+              <div className="formula-note">0.65 &le; &#x03D5; &le; 0.90</div>
             </div>
           </div>
         </div>
@@ -375,7 +375,7 @@ export default function ResultsPanel({ results }) {
                   Minimum Flexural Strength (ACI 318 &sect;9.6.2.2):
                 </div>
                 <div className="formula">
-                  <span className="formula-lhs">&phi;M<sub>n</sub></span>{' '}
+                  <span className="formula-lhs">&#x03D5;M<sub>n</sub></span>{' '}
                   &ge; 1.2&#8239;M<sub>cr</sub>
                 </div>
                 <div className="formula">
@@ -385,8 +385,8 @@ export default function ResultsPanel({ results }) {
                 </div>
                 <div className={`cracking-check ${cracking.passesMinStrength ? 'check-pass' : 'check-fail'}`}>
                   {cracking.passesMinStrength
-                    ? '\u2713 OK \u2014 \u03C6Mn \u2265 1.2Mcr'
-                    : '\u2717 FAILS \u2014 \u03C6Mn < 1.2Mcr'}
+                    ? '\u2713 OK \u2014 \u03D5Mn \u2265 1.2Mcr'
+                    : '\u2717 FAILS \u2014 \u03D5Mn < 1.2Mcr'}
                 </div>
               </div>
             </div>
