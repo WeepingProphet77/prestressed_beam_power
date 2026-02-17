@@ -33,7 +33,7 @@ function BarGauge({ title, value, displayValue, zones, markers, needleLabel }) {
     <div className="hbar-gauge">
       <div className="hbar-title-row">
         <span className="hbar-title" dangerouslySetInnerHTML={{ __html: title }} />
-        <span className="hbar-readout" style={{ color: needleColor }}>{displayValue}</span>
+        <span className="hbar-readout" style={{ color: needleColor }} dangerouslySetInnerHTML={{ __html: displayValue }} />
       </div>
 
       {/* Zone labels */}
