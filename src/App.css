@@ -487,8 +487,8 @@
 /* ── Horizontal bar gauges ── */
 .hbar-gauges-stack {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.1rem;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
   margin-bottom: 1rem;
 }
 
@@ -529,29 +529,31 @@
 /* Zone labels above the bar */
 .hbar-zone-labels {
   position: relative;
-  height: 1rem;
-  margin-bottom: 0.1rem;
+  height: 1.1rem;
+  margin-bottom: 0.15rem;
 }
 
 .hbar-zone-label {
   position: absolute;
   top: 0;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1rem;
+  line-height: 1.1rem;
+  padding: 0 2px;
+  box-sizing: border-box;
 }
 
 /* The track */
 .hbar-track {
   position: relative;
-  height: 14px;
-  border-radius: 7px;
+  height: 18px;
+  border-radius: 9px;
   overflow: visible;
   background: var(--slate-200);
 }
@@ -564,15 +566,15 @@
 }
 
 .hbar-zone:first-child {
-  border-radius: 7px 0 0 7px;
+  border-radius: 9px 0 0 9px;
 }
 
 .hbar-zone:last-child {
-  border-radius: 0 7px 7px 0;
+  border-radius: 0 9px 9px 0;
 }
 
 .hbar-zone:first-child:last-child {
-  border-radius: 7px;
+  border-radius: 9px;
 }
 
 /* Needle indicator */
@@ -610,8 +612,8 @@
 /* Markers below the bar */
 .hbar-markers {
   position: relative;
-  height: 2rem;
-  margin-top: 0.15rem;
+  height: 1.6rem;
+  margin-top: 0.2rem;
 }
 
 .hbar-marker {
@@ -623,6 +625,18 @@
   align-items: center;
 }
 
+/* Anchor first marker's label to the left edge so it doesn't clip off-screen */
+.hbar-marker-first {
+  transform: translateX(0);
+  align-items: flex-start;
+}
+
+/* Anchor last marker's label to the right edge */
+.hbar-marker-last {
+  transform: translateX(-100%);
+  align-items: flex-end;
+}
+
 .hbar-marker-tick {
   width: 1px;
   height: 6px;
@@ -630,7 +644,7 @@
 }
 
 .hbar-marker-label {
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   font-family: 'JetBrains Mono', monospace;
   color: var(--slate-500);
   white-space: nowrap;
@@ -642,29 +656,9 @@
   font-size: 0.7em;
 }
 
-/* Needle callout - shown below markers */
+/* Needle callout - hidden to reduce clutter, value shown in title readout */
 .hbar-needle-callout {
-  position: absolute;
-  bottom: -0.2rem;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.hbar-callout-text {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  padding: 0.1rem 0.35rem;
-  border: 1.5px solid;
-  border-radius: var(--radius-xs);
-  background: #fff;
-  white-space: nowrap;
-  box-shadow: var(--shadow-sm);
-}
-
-.hbar-callout-text sub {
-  font-size: 0.7em;
+  display: none;
 }
 
 /* Status badges */
@@ -1431,10 +1425,6 @@
 }
 
 @media (max-width: 768px) {
-  .hbar-gauges-stack {
-    grid-template-columns: 1fr;
-  }
-
   .diagrams-row {
     grid-template-columns: 1fr;
   }
@@ -1489,10 +1479,6 @@
 
   .hbar-marker-label {
     font-size: 0.55rem;
-  }
-
-  .hbar-gauges-stack {
-    grid-template-columns: 1fr;
   }
 
   .gauge-badges {

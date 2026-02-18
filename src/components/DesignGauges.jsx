@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 const PHI = '\u03D5';
 
 /* ── Horizontal bar gauge ── */
-function BarGauge({ title, value, displayValue, zones, markers, needleLabel }) {
+function BarGauge({ title, value, displayValue, zones, markers }) {
   // zones: [{ start, end, color, label }] — defines colored bands
   // markers: [{ value: number, label: string }] — tick marks with labels
   // The full range is derived from zones
@@ -28,6 +28,17 @@ function BarGauge({ title, value, displayValue, zones, markers, needleLabel }) {
       break;
     }
   }
+
+  // Compute marker positions and detect overlaps for staggering.
+  // If two adjacent markers are within 15% of each other, stagger the second one.
+  const markerPositions = markers.map((m) => toPercent(m.value));
+  const staggered = markers.map(() => false);
+  for (let i = 1; i < markerPositions.length; i++) {
+    if (Math.abs(markerPositions[i] - markerPositions[i - 1]) < 15) {
+      staggered[i] = true;
+    }
+  }
+  const hasStaggered = staggered.some(Boolean);
 
   return (
     <div className="hbar-gauge">
@@ -86,35 +97,27 @@ function BarGauge({ title, value, displayValue, zones, markers, needleLabel }) {
       </div>
 
       {/* Marker ticks and labels below the bar */}
-      <div className="hbar-markers">
+      <div className="hbar-markers" style={hasStaggered ? { height: '2.6rem' } : undefined}>
         {markers.map((m, i) => {
-          const pos = toPercent(m.value);
+          const pos = markerPositions[i];
+          const isFirst = i === 0;
+          const isLast = i === markers.length - 1;
           return (
             <div
               key={i}
-              className="hbar-marker"
+              className={`hbar-marker${isFirst ? ' hbar-marker-first' : ''}${isLast ? ' hbar-marker-last' : ''}`}
               style={{ left: `${pos}%` }}
             >
               <div className="hbar-marker-tick" />
               <span
                 className="hbar-marker-label"
+                style={staggered[i] ? { marginTop: '0.85rem' } : undefined}
                 dangerouslySetInnerHTML={{ __html: m.label }}
               />
             </div>
           );
         })}
       </div>
-
-      {/* Needle value callout */}
-      {needleLabel && (
-        <div className="hbar-needle-callout" style={{ left: `${needlePos}%` }}>
-          <span
-            className="hbar-callout-text"
-            style={{ borderColor: needleColor, color: needleColor }}
-            dangerouslySetInnerHTML={{ __html: needleLabel }}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -197,7 +200,7 @@ export default function DesignGauges({ results }) {
         <BarGauge
           title="Section Strain Classification"
           value={epsilonT}
-          displayValue={`${PHI}<sub>t</sub> = ${epsilonT.toFixed(5)}`}
+          displayValue={`&epsilon;<sub>t</sub> = ${epsilonT.toFixed(5)}`}
           zones={[
             { start: 0, end: epsilonTy, color: '#ef4444', label: 'Compression' },
             { start: epsilonTy, end: tensionLimit, color: '#f59e0b', label: 'Transition' },
@@ -209,7 +212,6 @@ export default function DesignGauges({ results }) {
             { value: tensionLimit, label: `&epsilon;<sub>ty</sub>+0.003 = ${tensionLimit.toFixed(4)}` },
             { value: strainMax, label: strainMax.toFixed(4) },
           ]}
-          needleLabel={`&epsilon;<sub>t</sub> = ${epsilonT.toFixed(5)}`}
         />
 
         {/* Phi Factor */}
@@ -227,7 +229,6 @@ export default function DesignGauges({ results }) {
             { value: 0.75, label: '0.75' },
             { value: 0.90, label: '0.90' },
           ]}
-          needleLabel={`${PHI} = ${phi.toFixed(3)}`}
         />
 
         {/* c/dt Ratio */}
@@ -236,7 +237,7 @@ export default function DesignGauges({ results }) {
           value={cOverD}
           displayValue={`c/d<sub>t</sub> = ${cOverD.toFixed(4)}`}
           zones={[
-            { start: 0, end: 0.375, color: '#22c55e', label: 'Tension-Controlled' },
+            { start: 0, end: 0.375, color: '#22c55e', label: 'Tension-Ctrl' },
             { start: 0.375, end: 0.6, color: '#f59e0b', label: 'Transition' },
             { start: 0.6, end: Math.max(0.8, cOverD * 1.15), color: '#ef4444', label: 'Compression' },
           ]}
@@ -246,14 +247,13 @@ export default function DesignGauges({ results }) {
             { value: 0.6, label: '0.600' },
             { value: Math.max(0.8, cOverD * 1.15), label: Math.max(0.8, cOverD * 1.15).toFixed(2) },
           ]}
-          needleLabel={`c/d<sub>t</sub> = ${cOverD.toFixed(4)}`}
         />
 
         {/* Steel Stress */}
         <BarGauge
           title="Extreme Tension Steel Stress, f<sub>ps</sub>"
           value={extremeLayer.stress}
-          displayValue={`f<sub>ps</sub> = ${extremeLayer.stress.toFixed(1)} ksi`}
+          displayValue={`f<sub>ps</sub> = ${extremeLayer.stress.toFixed(1)} ksi (${((extremeLayer.stress / stressCap) * 100).toFixed(0)}%)`}
           zones={[
             { start: 0, end: fpy, color: '#3b82f6', label: 'Elastic' },
             { start: fpy, end: stressCap, color: '#22c55e', label: 'Inelastic' },
@@ -264,7 +264,6 @@ export default function DesignGauges({ results }) {
             { value: fpy, label: `f<sub>py</sub> = ${fpy}` },
             { value: stressCap, label: `f<sub>pu</sub> = ${stressCap}` },
           ]}
-          needleLabel={`${extremeLayer.stress.toFixed(1)} ksi (${((extremeLayer.stress / stressCap) * 100).toFixed(0)}%)`}
         />
       </div>
 
