@@ -214,23 +214,6 @@ export default function DesignGauges({ results }) {
           ]}
         />
 
-        {/* Phi Factor */}
-        <BarGauge
-          title={`Strength Reduction Factor, ${PHI}`}
-          value={phi}
-          displayValue={`${PHI} = ${phi.toFixed(3)}`}
-          zones={[
-            { start: 0.65, end: 0.65 + (0.90 - 0.65) * 0.01, color: '#ef4444', label: 'Comp.' },
-            { start: 0.65 + (0.90 - 0.65) * 0.01, end: 0.90 - (0.90 - 0.65) * 0.01, color: '#f59e0b', label: 'Transition' },
-            { start: 0.90 - (0.90 - 0.65) * 0.01, end: 0.90, color: '#22c55e', label: 'Tension' },
-          ]}
-          markers={[
-            { value: 0.65, label: '0.65' },
-            { value: 0.75, label: '0.75' },
-            { value: 0.90, label: '0.90' },
-          ]}
-        />
-
         {/* c/dt Ratio */}
         <BarGauge
           title="Neutral Axis Depth Ratio, c/d<sub>t</sub>"
