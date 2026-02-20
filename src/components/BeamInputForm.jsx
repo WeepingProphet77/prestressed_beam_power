@@ -3,11 +3,11 @@ import steelPresets from '../data/steelPresets';
 
 const DEFAULT_SECTION = {
   sectionType: 'rectangular',
-  bf: 12,
-  bw: 12,
+  bf: 16,
+  bw: 16,
   hf: 0,
-  h: 24,
-  fc: 6,
+  h: 6,
+  fc: 5,
   // Sandwich shape parameters
   bt: 16,  // top rectangle width
   ht: 8,   // top rectangle height
@@ -26,8 +26,8 @@ const DEFAULT_SECTION = {
 
 const DEFAULT_LAYER = {
   steelPresetId: 'grade270',
-  area: 1.53,
-  depth: 20,
+  area: 0.153,
+  depth: 3,
   fse: 170,
 };
 
