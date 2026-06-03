@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import steelPresets from '../data/steelPresets';
+import SectionDrawer from './SectionDrawer';
 
 const DEFAULT_SECTION = {
   sectionType: 'rectangular',
@@ -22,6 +23,10 @@ const DEFAULT_SECTION = {
   numVoids: 4,           // number of voids
   voidDiameter: 6,       // void diameter (in), typically 2/3 to 3/4 of depth
   voidCenterDepth: 12,   // depth to void centers from top (in)
+  // Custom drawn section: outer polygon + optional hole polygons (inches,
+  // y measured downward from the extreme compression fiber).
+  points: [],
+  holes: [],
 };
 
 const DEFAULT_LAYER = {
@@ -89,6 +94,25 @@ export default function BeamInputForm({ onCalculate }) {
     setSection(updated);
   };
 
+  // Receive geometry from the custom-section drawer. Normalize so the topmost
+  // point sits at y = 0 (extreme compression fiber) and set total depth h.
+  const handleCustomGeometry = (points, holes) => {
+    if (!points || points.length < 3) {
+      setSection((prev) => ({ ...prev, points: [], holes: [], h: prev.h }));
+      return;
+    }
+    const allY = points.map((p) => p.y).concat(...holes.map((h) => h.map((p) => p.y)));
+    const minY = Math.min(...allY);
+    const maxY = Math.max(...points.map((p) => p.y));
+    const shift = (ring) => ring.map((p) => ({ x: p.x, y: p.y - minY }));
+    setSection((prev) => ({
+      ...prev,
+      points: shift(points),
+      holes: holes.map(shift),
+      h: maxY - minY,
+    }));
+  };
+
   const handleLayerChange = (id, field, value) => {
     setLayers((prev) =>
       prev.map((l) => {
@@ -116,6 +140,34 @@ export default function BeamInputForm({ onCalculate }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Custom drawn section: pass the polygon geometry straight through.
+    if (section.sectionType === 'custom') {
+      if (!section.points || section.points.length < 3) {
+        onCalculate(null, [], 'Draw and close the outer shape (at least 3 nodes) before calculating.');
+        return;
+      }
+      const finalSection = {
+        sectionType: 'custom',
+        points: section.points,
+        holes: section.holes || [],
+        h: parseFloat(section.h),
+        fc: parseFloat(section.fc),
+      };
+      const finalLayers = layers.map((l) => {
+        const preset = steelPresets.find((p) => p.id === l.steelPresetId);
+        return {
+          area: parseFloat(l.area),
+          depth: parseFloat(l.depth),
+          fse: parseFloat(l.fse) || 0,
+          steel: preset,
+          name: preset.name,
+        };
+      });
+      onCalculate(finalSection, finalLayers);
+      return;
+    }
+
     const finalSection = {
       ...section,
       bf: section.sectionType === 'rectangular' ? section.bw : parseFloat(section.bf),
@@ -177,9 +229,24 @@ export default function BeamInputForm({ onCalculate }) {
               <option value="sandwich">Sandwich</option>
               <option value="doubletee">Double Tee (PCI)</option>
               <option value="hollowcore">Hollow Core (PCI)</option>
+              <option value="custom">Custom (Draw)</option>
             </select>
           </label>
         </div>
+
+        {section.sectionType === 'custom' && (
+          <>
+            <SectionDrawer value={section} onChange={handleCustomGeometry} />
+            <div className="form-row">
+              <label className="computed">
+                <span className="label-text">Total Depth, h (in)</span>
+                <span className="computed-value">
+                  {section.points?.length >= 3 ? section.h.toFixed(2) : '—'}
+                </span>
+              </label>
+            </div>
+          </>
+        )}
 
         <div className="form-row">
           {section.sectionType === 'tbeam' && (
@@ -292,7 +359,7 @@ export default function BeamInputForm({ onCalculate }) {
               </label>
             </>
           )}
-          {section.sectionType !== 'sandwich' && section.sectionType !== 'hollowcore' && (
+          {section.sectionType !== 'sandwich' && section.sectionType !== 'hollowcore' && section.sectionType !== 'custom' && (
             <label>
               <span className="label-text">Total Depth, h (in)</span>
               <input

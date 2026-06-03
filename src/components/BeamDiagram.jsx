@@ -5,7 +5,7 @@
 export default function BeamDiagram({ section, results }) {
   if (!section || !results) return null;
 
-  const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb, numStems, stemWidth, numVoids, voidDiameter } = section;
+  const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb, numStems, stemWidth, numVoids, voidDiameter, points, holes } = section;
   const { c, a, layerResults } = results;
 
   // Drawing scale
@@ -16,7 +16,11 @@ export default function BeamDiagram({ section, results }) {
   const isSandwich = sectionType === 'sandwich';
   const isDoubleTee = sectionType === 'doubletee';
   const isHollowCore = sectionType === 'hollowcore';
-  const maxWidth = isSandwich ? Math.max(bt, bb) : (bf || bw);
+  const isCustom = sectionType === 'custom';
+  const customMaxX = isCustom && points?.length
+    ? Math.max(...points.map((p) => p.x))
+    : 1;
+  const maxWidth = isCustom ? customMaxX : (isSandwich ? Math.max(bt, bb) : (bf || bw));
   const scale = Math.min(maxDrawWidth / maxWidth, maxDrawHeight / h);
 
   const drawW = maxWidth * scale;
@@ -29,9 +33,19 @@ export default function BeamDiagram({ section, results }) {
 
   const isT = sectionType === 'tbeam' && hf > 0 && bf > bw;
 
+  // Helper: build an SVG path string for a polygon ring (custom sections).
+  const ringPath = (ring) =>
+    ring.map((p, i) => `${i === 0 ? 'M' : 'L'} ${ox + p.x * scale} ${oy + p.y * scale}`).join(' ') + ' Z';
+
   // Build beam outline path
   let outlinePath;
-  if (isSandwich) {
+  if (isCustom) {
+    // Outer ring plus hole rings; evenodd fill rule carves out the holes.
+    outlinePath = ringPath(points);
+    for (const hole of holes || []) {
+      if (hole.length >= 3) outlinePath += ' ' + ringPath(hole);
+    }
+  } else if (isSandwich) {
     const topW = bt * scale;
     const topH = ht * scale;
     const gapH = hg * scale;
@@ -146,7 +160,11 @@ export default function BeamDiagram({ section, results }) {
   // Stress block
   const aH = a * scale;
   let stressBlockPath;
-  if (isSandwich) {
+  if (isCustom) {
+    // Same geometry as the outline; a clipPath (rendered below) trims it to the
+    // strip between the top fiber and depth a, so holes are carved out for free.
+    stressBlockPath = outlinePath;
+  } else if (isSandwich) {
     const topW = bt * scale;
     const topH = ht * scale;
     const gapH = hg * scale;
@@ -298,10 +316,12 @@ export default function BeamDiagram({ section, results }) {
 
   // Neutral axis y position
   const naY = oy + c * scale;
-  const beamCenterX = isSandwich ? ox + drawW / 2 :
-                      (isT || isDoubleTee ? ox + (bf * scale) / 2 : ox + drawW / 2);
-  const beamRightX = isSandwich ? ox + drawW :
-                     (isT || isDoubleTee ? ox + bf * scale : ox + drawW);
+  const beamCenterX = isCustom ? ox + drawW / 2 :
+                      (isSandwich ? ox + drawW / 2 :
+                      (isT || isDoubleTee ? ox + (bf * scale) / 2 : ox + drawW / 2));
+  const beamRightX = isCustom ? ox + drawW :
+                     (isSandwich ? ox + drawW :
+                     (isT || isDoubleTee ? ox + bf * scale : ox + drawW));
 
   // Annotation x
   const annotX = beamRightX + 12;
@@ -318,14 +338,29 @@ export default function BeamDiagram({ section, results }) {
           <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6">
             <path d="M0,6 L6,0" stroke="#6b9bd2" strokeWidth="0.8" />
           </pattern>
+          {isCustom && (
+            <clipPath id="stressClip">
+              {/* Strip from the top fiber down to depth a */}
+              <rect x={ox - 4} y={oy} width={drawW + 8} height={aH} />
+            </clipPath>
+          )}
         </defs>
 
         {/* Stress block fill */}
-        <path d={stressBlockPath} fill="#dbeafe" stroke="none" />
-        <path d={stressBlockPath} fill="url(#hatch)" stroke="#3b82f6" strokeWidth="1" />
+        {isCustom ? (
+          <g clipPath="url(#stressClip)">
+            <path d={stressBlockPath} fillRule="evenodd" fill="#dbeafe" stroke="none" />
+            <path d={stressBlockPath} fillRule="evenodd" fill="url(#hatch)" stroke="#3b82f6" strokeWidth="1" />
+          </g>
+        ) : (
+          <>
+            <path d={stressBlockPath} fill="#dbeafe" stroke="none" />
+            <path d={stressBlockPath} fill="url(#hatch)" stroke="#3b82f6" strokeWidth="1" />
+          </>
+        )}
 
         {/* Beam outline */}
-        <path d={outlinePath} fill="none" stroke="#1e293b" strokeWidth="2.5" />
+        <path d={outlinePath} fillRule={isCustom ? 'evenodd' : 'nonzero'} fill="none" stroke="#1e293b" strokeWidth="2.5" />
 
         {/* Neutral axis */}
         <line

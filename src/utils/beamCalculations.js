@@ -132,6 +132,11 @@ export function steelStrain(di, c, fse, Es) {
  * For a rectangular beam, bf = bw and hf = h, so it reduces to Cc = 0.85·f'c·a·b.
  */
 export function concreteCompression(fc, a, bf, bw, hf, section = null) {
+  // Handle custom drawn polygon section (with optional holes)
+  if (section && section.sectionType === 'custom') {
+    return 0.85 * fc * polygonAreaAboveDepth(section, a);
+  }
+
   // Handle sandwich section if section object is provided
   if (section && section.sectionType === 'sandwich') {
     const { bt, ht, hg, bb } = section;
@@ -210,6 +215,11 @@ export function concreteCompression(fc, a, bf, bw, hf, section = null) {
  *   Approximated as gross section centroid minus void contribution
  */
 export function compressionCentroid(a, bf, bw, hf, section = null) {
+  // Handle custom drawn polygon section (with optional holes)
+  if (section && section.sectionType === 'custom') {
+    return polygonCentroidAboveDepth(section, a);
+  }
+
   // Handle sandwich section if section object is provided
   if (section && section.sectionType === 'sandwich') {
     const { bt, ht, hg, bb } = section;
@@ -427,6 +437,157 @@ export function decompressionStrain(fse, Es) {
   return fse / Es;
 }
 
+// ─── Custom polygon geometry ─────────────────────────────────────────────────
+
+/**
+ * A "custom" section is an outer closed polygon plus zero or more inner hole
+ * polygons (voids). Each ring is an ordered array of { x, y } points in inches.
+ * The y-axis points downward, with y = 0 at the extreme compression fiber (top),
+ * matching the depth convention used throughout this module.
+ *
+ * The helpers below provide the only two geometric primitives the analysis
+ * engine needs:
+ *   1. area + centroid of the concrete between y = 0 and y = a   (stress block)
+ *   2. full area, centroid, and Ig of the whole section          (cracking)
+ * Holes are subtracted from the outer ring in every case.
+ */
+
+/**
+ * Signed area of a single ring via the shoelace formula.
+ * Positive when the ring is counter-clockwise in a y-up frame; sign is only
+ * used internally, callers receive magnitudes via the ring* wrappers below.
+ */
+function ringSignedArea(ring) {
+  let a = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const p = ring[i];
+    const q = ring[(i + 1) % ring.length];
+    a += p.x * q.y - q.x * p.y;
+  }
+  return a / 2;
+}
+
+/**
+ * Area (magnitude), and area-weighted first/second moments of a single ring
+ * about the global axes (y = 0). Returns { A, Ay, Iy0 } where:
+ *   A   = |area|
+ *   Ay  = A · ȳ              (first moment about y = 0)
+ *   Iy0 = ∫ y² dA            (second moment about the y = 0 axis)
+ */
+function ringMoments(ring) {
+  let a2 = 0; // 2·signed area
+  let cyNum = 0; // Σ (y_i + y_{i+1})·cross  → 6·signedArea·ȳ
+  let iy0Num = 0; // Σ (y_i² + y_i y_{i+1} + y_{i+1}²)·cross → 12·signed Iy0
+  for (let i = 0; i < ring.length; i++) {
+    const p = ring[i];
+    const q = ring[(i + 1) % ring.length];
+    const cross = p.x * q.y - q.x * p.y;
+    a2 += cross;
+    cyNum += (p.y + q.y) * cross;
+    iy0Num += (p.y * p.y + p.y * q.y + q.y * q.y) * cross;
+  }
+  const signedArea = a2 / 2;
+  if (Math.abs(signedArea) < 1e-12) return { A: 0, Ay: 0, Iy0: 0 };
+  const yBar = cyNum / (6 * signedArea);
+  const A = Math.abs(signedArea);
+  // The shoelace second moment carries the winding sign; the physical
+  // ∫ y² dA is its magnitude (always positive for a simple ring).
+  const Iy0 = Math.abs(iy0Num / 12);
+  return { A, Ay: A * yBar, Iy0 };
+}
+
+/**
+ * Clip a single ring to the half-plane y ≤ a (Sutherland–Hodgman against the
+ * single line y = a). Returns the clipped ring (possibly empty).
+ */
+function clipRingBelow(ring, a) {
+  const out = [];
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const cur = ring[i];
+    const nxt = ring[(i + 1) % n];
+    const curIn = cur.y <= a;
+    const nxtIn = nxt.y <= a;
+    if (curIn) out.push(cur);
+    if (curIn !== nxtIn) {
+      // Edge crosses y = a → add the intersection point.
+      const t = (a - cur.y) / (nxt.y - cur.y);
+      out.push({ x: cur.x + t * (nxt.x - cur.x), y: a });
+    }
+  }
+  return out;
+}
+
+/**
+ * Build the list of rings for a custom section: outer first, then holes.
+ */
+function customRings(section) {
+  const outer = section.points || [];
+  const holes = section.holes || [];
+  return { outer, holes };
+}
+
+/**
+ * Net concrete area of a custom section between y = 0 and y = a.
+ * (Outer clipped area minus hole clipped areas.)
+ */
+export function polygonAreaAboveDepth(section, a) {
+  const { outer, holes } = customRings(section);
+  if (outer.length < 3) return 0;
+  let area = Math.abs(ringSignedArea(clipRingBelow(outer, a)));
+  for (const hole of holes) {
+    if (hole.length < 3) continue;
+    area -= Math.abs(ringSignedArea(clipRingBelow(hole, a)));
+  }
+  return Math.max(area, 0);
+}
+
+/**
+ * Centroid (depth from top) of the net concrete area between y = 0 and y = a.
+ */
+export function polygonCentroidAboveDepth(section, a) {
+  const { outer, holes } = customRings(section);
+  if (outer.length < 3) return 0;
+  let A = 0;
+  let Ay = 0;
+  const om = ringMoments(clipRingBelow(outer, a));
+  A += om.A;
+  Ay += om.Ay;
+  for (const hole of holes) {
+    if (hole.length < 3) continue;
+    const hm = ringMoments(clipRingBelow(hole, a));
+    A -= hm.A;
+    Ay -= hm.Ay;
+  }
+  return A > 1e-12 ? Ay / A : 0;
+}
+
+/**
+ * Full gross properties of a custom polygon (with holes).
+ * Returns { A, yCg, Ig } with yCg measured from the top fiber (y = 0).
+ */
+export function polygonProperties(section) {
+  const { outer, holes } = customRings(section);
+  let A = 0;
+  let Ay = 0;
+  let Iy0 = 0; // ∫ y² dA about the y = 0 axis
+  const om = ringMoments(outer);
+  A += om.A;
+  Ay += om.Ay;
+  Iy0 += om.Iy0;
+  for (const hole of holes) {
+    if (hole.length < 3) continue;
+    const hm = ringMoments(hole);
+    A -= hm.A;
+    Ay -= hm.Ay;
+    Iy0 -= hm.Iy0;
+  }
+  const yCg = A > 1e-12 ? Ay / A : 0;
+  // Parallel-axis shift from the y = 0 axis to the centroidal axis.
+  const Ig = Iy0 - A * yCg * yCg;
+  return { A, yCg, Ig };
+}
+
 // ─── Gross section properties ────────────────────────────────────────────────
 
 /**
@@ -489,6 +650,14 @@ export function grossSectionProperties(section) {
       const flangeI = (bf * Math.pow(hf, 3)) / 12 + flangeA * Math.pow(yCg - hf / 2, 2);
       const stemI = (numStems * stemWidth * Math.pow(hs, 3)) / 12 + stemA * Math.pow(hf + hs / 2 - yCg, 2);
       Ig = flangeI + stemI;
+      break;
+    }
+
+    case 'custom': {
+      const props = polygonProperties(section);
+      A = props.A;
+      yCg = props.yCg;
+      Ig = props.Ig;
       break;
     }
 
