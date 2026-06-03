@@ -315,6 +315,49 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+.drawer-step {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+  flex-wrap: wrap;
+}
+
+.drawer-step label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.drawer-step input {
+  width: 5rem;
+}
+
+.drawer-step-presets {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.drawer-step-presets button {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.74rem;
+  border: 1.5px solid var(--blue-200, #bfdbfe);
+  border-radius: var(--radius-sm, 6px);
+  background: #fff;
+  color: var(--blue-700, #1d4ed8);
+  cursor: pointer;
+}
+
+.drawer-step-presets button.active {
+  background: var(--blue-500, #3b82f6);
+  border-color: var(--blue-500, #3b82f6);
+  color: #fff;
+}
+
+.drawer-step-presets button:hover:not(.active) {
+  background: var(--blue-50, #eff6ff);
+}
+
 .drawer-readout {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.74rem;
