@@ -285,7 +285,7 @@ export default function BeamInputForm({ onCalculate }) {
               />
             </label>
           )}
-          {section.sectionType !== 'sandwich' && section.sectionType !== 'doubletee' && section.sectionType !== 'hollowcore' && (
+          {section.sectionType !== 'sandwich' && section.sectionType !== 'doubletee' && section.sectionType !== 'hollowcore' && section.sectionType !== 'custom' && (
             <label>
               <span className="label-text">{section.sectionType === 'tbeam' ? 'Web' : 'Beam'} Width, b<sub>w</sub> (in)</span>
               <input
