@@ -6,7 +6,7 @@ import StrainDiagram from './components/StrainDiagram';
 import ResultsPanel from './components/ResultsPanel';
 import DesignGauges from './components/DesignGauges';
 import ExportDialog from './components/ExportDialog';
-import { analyzeBeam } from './utils/beamCalculations';
+import { analyzeBeam, polygonProperties } from './utils/beamCalculations';
 import generatePdfReport from './utils/generatePdfReport';
 import './App.css';
 
@@ -18,11 +18,23 @@ export default function App() {
   const [exporting, setExporting] = useState(false);
   const resultsRef = useRef(null);
 
-  const handleCalculate = (sec, layers) => {
+  const handleCalculate = (sec, layers, preError) => {
     setError(null);
     try {
+      if (preError) {
+        throw new Error(preError);
+      }
       if (!layers.length) {
         throw new Error('Add at least one steel reinforcement layer.');
+      }
+      if (sec.sectionType === 'custom') {
+        if (!sec.points || sec.points.length < 3) {
+          throw new Error('Draw and close the outer shape (at least 3 nodes) before calculating.');
+        }
+        const { A } = polygonProperties(sec);
+        if (!(A > 0)) {
+          throw new Error('The drawn section has zero or invalid area. Check that the outline does not self-intersect and holes lie inside it.');
+        }
       }
       for (let i = 0; i < layers.length; i++) {
         const l = layers[i];

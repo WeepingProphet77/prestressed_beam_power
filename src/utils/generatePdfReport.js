@@ -235,6 +235,7 @@ export default async function generatePdfReport(results, section, info) {
     sandwich: 'Sandwich',
     doubletee: 'Double Tee (PCI)',
     hollowcore: 'Hollow Core (PCI)',
+    custom: 'Custom (Drawn)',
   };
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
