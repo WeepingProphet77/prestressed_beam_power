@@ -44,16 +44,8 @@ export default function ResultsPanel({ results }) {
     epsilonT,
     cOverD,
     fc,
-    ductile,
-    transition,
     cracking,
   } = results;
-
-  const ductilityStatus = ductile
-    ? { label: 'Tension-Controlled', cls: 'status-good' }
-    : transition
-    ? { label: 'Transition Zone', cls: 'status-warn' }
-    : { label: 'Compression-Controlled', cls: 'status-bad' };
 
   // Find extreme tension layer (deepest) for evaluated formula display
   let extremeLayer = layerResults[0];
@@ -161,13 +153,13 @@ export default function ResultsPanel({ results }) {
               <div className="formula-title">Strain Compatibility (ACI 318):</div>
               <div className="formula">
                 <span className="formula-lhs">&epsilon;<sub>si</sub></span> ={' '}
-                &epsilon;<sub>cu</sub>&#8239;(d<sub>i</sub> / c &minus; 1) + f<sub>se</sub> / E<sub>s</sub>
+                &epsilon;<sub>cu</sub>&#8239;(d<sub>i</sub> / c &minus; 1) + f<sub>se</sub> / E<sub>s</sub> + &Delta;&epsilon;<sub>decomp</sub>
               </div>
               {etl && (
                 <>
                   <div className="formula">
                     <span className="formula-lhs" style={{visibility: 'hidden'}}>&epsilon;<sub>si</sub></span> ={' '}
-                    0.003&#8239;({etl.depth.toFixed(2)} / {c.toFixed(3)} &minus; 1) + {(etl.fse || 0).toFixed(1)} / {etl.steel.Es.toLocaleString()}
+                    0.003&#8239;({etl.depth.toFixed(2)} / {c.toFixed(3)} &minus; 1) + {(etl.fse || 0).toFixed(1)} / {etl.steel.Es.toLocaleString()} + {(etl.epsDecomp || 0).toFixed(6)}
                   </div>
                   <div className="formula">
                     <span className="formula-lhs" style={{visibility: 'hidden'}}>&epsilon;<sub>si</sub></span> ={' '}
@@ -178,7 +170,10 @@ export default function ResultsPanel({ results }) {
                   </div>
                 </>
               )}
-              <div className="formula-note">&epsilon;<sub>cu</sub> = 0.003 per ACI 318</div>
+              <div className="formula-note">
+                &epsilon;<sub>cu</sub> = 0.003 per ACI 318. &Delta;&epsilon;<sub>decomp</sub> is the
+                concrete decompression strain at the steel level (bonded prestress only).
+              </div>
             </div>
 
             {/* Whitney Stress Block */}
@@ -312,7 +307,8 @@ export default function ResultsPanel({ results }) {
                 </tr>
                 <tr>
                   <td>
-                    Modulus of rupture, f<sub>r</sub> = 7.5&radic;(f&#x2032;<sub>c</sub>)
+                    Modulus of rupture, f<sub>r</sub> = 7.5&lambda;&radic;(f&#x2032;<sub>c</sub>)
+                    {cracking.lambda != null && cracking.lambda !== 1 && ` (λ = ${cracking.lambda})`}
                   </td>
                   <td>{cracking.fr.toFixed(4)} ksi</td>
                 </tr>
@@ -346,12 +342,15 @@ export default function ResultsPanel({ results }) {
                 </div>
                 <div className="formula">
                   <span className="formula-lhs">f<sub>r</sub></span> ={' '}
-                  7.5&radic;(f&#x2032;<sub>c</sub>){' '}
-                  = 7.5&radic;({(fc * 1000).toFixed(0)})
+                  7.5&lambda;&radic;(f&#x2032;<sub>c</sub>){' '}
+                  = 7.5 &times; {cracking.lambda ?? 1} &times; &radic;({(fc * 1000).toFixed(0)})
                   {' '}= {(cracking.fr * 1000).toFixed(1)} psi
                   {' '}= {cracking.fr.toFixed(4)} ksi
                 </div>
-                <div className="formula-note">f&#x2032;<sub>c</sub> in psi for this equation</div>
+                <div className="formula-note">
+                  f&#x2032;<sub>c</sub> in psi for this equation. &lambda; = lightweight factor
+                  (ACI 318 &sect;19.2.4).
+                </div>
               </div>
               <div className="formula-block">
                 <div className="formula-title">
@@ -372,11 +371,20 @@ export default function ResultsPanel({ results }) {
               </div>
               <div className="formula-block">
                 <div className="formula-title">
-                  Minimum Flexural Strength (ACI 318 &sect;9.6.2.2):
+                  Minimum Flexural Strength (ACI 318 &sect;9.6.1.3):
                 </div>
                 <div className="formula">
                   <span className="formula-lhs">&#x03D5;M<sub>n</sub></span>{' '}
-                  &ge; 1.2&#8239;M<sub>cr</sub>
+                  &ge; min(1.2&#8239;M<sub>cr</sub>, 1.33&#8239;M<sub>u</sub>)
+                </div>
+                <div className="formula">
+                  1.2&#8239;M<sub>cr</sub> = {(cracking.Mcr12Ft ?? cracking.thresholdFt).toFixed(1)} kip-ft
+                  {cracking.Mu > 0 && (
+                    <>
+                      {' '}&nbsp;|&nbsp; 1.33&#8239;M<sub>u</sub> = {cracking.Mu133Ft.toFixed(1)} kip-ft
+                      {' '}&nbsp;&rarr;&nbsp; governing: {cracking.governs}
+                    </>
+                  )}
                 </div>
                 <div className="formula">
                   {phiMnFt.toFixed(1)} kip-ft{' '}
@@ -385,8 +393,8 @@ export default function ResultsPanel({ results }) {
                 </div>
                 <div className={`cracking-check ${cracking.passesMinStrength ? 'check-pass' : 'check-fail'}`}>
                   {cracking.passesMinStrength
-                    ? '\u2713 OK \u2014 \u03D5Mn \u2265 1.2Mcr'
-                    : '\u2717 FAILS \u2014 \u03D5Mn < 1.2Mcr'}
+                    ? `\u2713 OK \u2014 \u03D5Mn \u2265 ${cracking.governs}`
+                    : `\u2717 FAILS \u2014 \u03D5Mn < ${cracking.governs}`}
                 </div>
               </div>
             </div>

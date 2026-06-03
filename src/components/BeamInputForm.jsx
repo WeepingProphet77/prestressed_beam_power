@@ -9,6 +9,8 @@ const DEFAULT_SECTION = {
   hf: 0,
   h: 6,
   fc: 5,
+  lambda: 1,   // lightweight-concrete factor λ (ACI 318-19 §19.2.4)
+  Mu: 0,       // factored moment demand Mu (kip-ft), uniaxial; enables 1.33Mu relief
   // Sandwich shape parameters
   bt: 16,  // top rectangle width
   ht: 8,   // top rectangle height
@@ -195,6 +197,8 @@ export default function BeamInputForm({ onCalculate }) {
   // Shared helpers for both section paths.
   const biaxialFields = () => ({
     bendingMode: section.bendingMode || 'uniaxial',
+    lambda: parseFloat(section.lambda) || 1,
+    Mu: parseFloat(section.Mu) || 0,
     Mux: parseFloat(section.Mux) || 0,
     Muy: parseFloat(section.Muy) || 0,
     MxService: parseFloat(section.MxService) || 0,
@@ -503,6 +507,33 @@ export default function BeamInputForm({ onCalculate }) {
                 : (0.85 - 0.05 * (section.fc - 4)).toFixed(3)}
             </span>
           </label>
+        </div>
+
+        <div className="form-row">
+          <label>
+            <span className="label-text">Concrete Weight (&lambda;)</span>
+            <select
+              value={section.lambda}
+              onChange={(e) => handleSectionChange('lambda', parseFloat(e.target.value))}
+            >
+              <option value={1}>Normalweight (&lambda; = 1.0)</option>
+              <option value={0.85}>Sand-lightweight (&lambda; = 0.85)</option>
+              <option value={0.75}>All-lightweight (&lambda; = 0.75)</option>
+            </select>
+          </label>
+          {section.bendingMode !== 'biaxial' && (
+            <label>
+              <span className="label-text">M<sub>u</sub> (factored, kip-ft)</span>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={section.Mu}
+                onChange={(e) => handleSectionChange('Mu', e.target.value)}
+              />
+              <span className="field-note">Optional — enables 1.33M<sub>u</sub> check &amp; utilization</span>
+            </label>
+          )}
         </div>
       </div>
 

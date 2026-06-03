@@ -555,14 +555,16 @@ export default async function generatePdfReport(results, section, info) {
     doc.text(' / c - 1) + ', px, ey); px += doc.getTextWidth(' / c - 1) + ');
     px += drawSub(doc, 'f', 'se', px, ey);
     doc.text(' / ', px, ey); px += doc.getTextWidth(' / ');
-    drawSub(doc, 'E', 's', px, ey);
+    px += drawSub(doc, 'E', 's', px, ey);
+    doc.text(' + ', px, ey); px += doc.getTextWidth(' + ');
+    drawSub(doc, '\u0394\u03B5', 'decomp', px, ey);
   });
   if (etl) {
     drawFlexExpr((ex, ey) => {
-      doc.text(`= 0.003\u00B7(${etl.depth.toFixed(2)} / ${results.c.toFixed(3)} - 1) + ${(etl.fse || 0).toFixed(1)} / ${etl.steel.Es.toLocaleString()} = ${etl.strain.toFixed(6)}`, ex, ey);
+      doc.text(`= 0.003\u00B7(${etl.depth.toFixed(2)} / ${results.c.toFixed(3)} - 1) + ${(etl.fse || 0).toFixed(1)} / ${etl.steel.Es.toLocaleString()} + ${(etl.epsDecomp || 0).toFixed(6)} = ${etl.strain.toFixed(6)}`, ex, ey);
     }, 26);
   }
-  drawFlexNote('\u03B5cu = 0.003 per ACI 318', 38);
+  drawFlexNote('\u03B5cu = 0.003 per ACI 318; \u0394\u03B5decomp = concrete decompression strain (bonded prestress only)', 38);
   ffy += ffGap;
 
   // Formula 3: Whitney Stress Block
@@ -817,7 +819,7 @@ export default async function generatePdfReport(results, section, info) {
           px += doc.getTextWidth('1.2 ');
           drawSub(doc, 'M', 'cr', px, ly);
         },
-        value: `${cr.thresholdFt.toFixed(1)} kip-ft`,
+        value: `${(cr.Mcr12Ft ?? cr.thresholdFt).toFixed(1)} kip-ft`,
       },
     ];
 
@@ -904,11 +906,11 @@ export default async function generatePdfReport(results, section, info) {
       px += drawSub(doc, 'f', 'r', px, ey);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...slate800);
-      doc.text(" = 7.5 sqrt(f'", px, ey); px += doc.getTextWidth(" = 7.5 sqrt(f'");
+      doc.text(` = 7.5 x ${cr.lambda ?? 1} x sqrt(f'`, px, ey); px += doc.getTextWidth(` = 7.5 x ${cr.lambda ?? 1} x sqrt(f'`);
       px += drawSub(doc, '', 'c', px, ey);
       doc.text(`) = ${cr.fr.toFixed(4)} ksi`, px, ey);
     });
-    drawCrFormulaNote("f'c in psi for this equation");
+    drawCrFormulaNote("f'c in psi; lambda = lightweight factor (ACI 318 Sec. 19.2.4)");
     cry += crGap;
 
     // Equation 3: Cracking Moment
@@ -936,8 +938,8 @@ export default async function generatePdfReport(results, section, info) {
     });
     cry += crGap;
 
-    // Equation 4: 1.2Mcr check
-    drawCrFormulaTitle('Minimum Flexural Strength (ACI 318 Sec. 9.6.2.2):');
+    // Equation 4: minimum-strength check (lesser of 1.2Mcr and 1.33Mu)
+    drawCrFormulaTitle('Minimum Flexural Strength (ACI 318 Sec. 9.6.1.3):');
     drawCrFormulaExpr((ex, ey) => {
       let px = ex;
       doc.setFont('helvetica', 'bold');
@@ -946,8 +948,8 @@ export default async function generatePdfReport(results, section, info) {
       px += drawSub(doc, 'M', 'n', px, ey);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...slate800);
-      doc.text(' >= 1.2 ', px, ey); px += doc.getTextWidth(' >= 1.2 ');
-      px += drawSub(doc, 'M', 'cr', px, ey);
+      const reqLabel = cr.Mu > 0 ? ` >= min(1.2Mcr, 1.33Mu) [${cr.governs}] ` : ' >= 1.2 Mcr ';
+      doc.text(reqLabel, px, ey); px += doc.getTextWidth(reqLabel);
       doc.text(`     ${phiMnFt.toFixed(1)}`, px, ey); px += doc.getTextWidth(`     ${phiMnFt.toFixed(1)}`);
       doc.text(` ${cr.passesMinStrength ? '>=' : '<'} ${cr.thresholdFt.toFixed(1)} kip-ft`, px, ey);
       px += doc.getTextWidth(` ${cr.passesMinStrength ? '>=' : '<'} ${cr.thresholdFt.toFixed(1)} kip-ft`);

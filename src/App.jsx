@@ -62,9 +62,11 @@ export default function App() {
         res = analyzeBeam(sec, layers);
         const totalSteel = res.layerResults.reduce((s, lr) => s + lr.force, 0);
         const equilibriumError = Math.abs(res.Cc - totalSteel);
-        if (equilibriumError > 0.1) {
+        if (!res.converged || equilibriumError > 0.1) {
           throw new Error(
-            `Solution did not converge. Equilibrium error = ${equilibriumError.toFixed(3)} kips. Check your inputs.`
+            `Solution did not converge — no force equilibrium found within the section ` +
+            `(equilibrium error = ${equilibriumError.toFixed(3)} kips). Check that the steel ` +
+            `area, depths, and section dimensions are physically reasonable.`
           );
         }
       }
@@ -111,7 +113,7 @@ export default function App() {
               className="btn-export-pdf"
               onClick={() => setExportOpen(true)}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
                 <path d="M4 1h5l4 4v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
                 <path d="M9 1v4h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M5.5 10.5l2 2 2-2M7.5 12.5V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
