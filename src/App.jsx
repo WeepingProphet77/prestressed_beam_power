@@ -6,7 +6,9 @@ import StrainDiagram from './components/StrainDiagram';
 import ResultsPanel from './components/ResultsPanel';
 import DesignGauges from './components/DesignGauges';
 import ExportDialog from './components/ExportDialog';
-import { analyzeBeam, polygonProperties } from './utils/beamCalculations';
+import InteractionDiagram from './components/InteractionDiagram';
+import BiaxialResults from './components/BiaxialResults';
+import { analyzeBeam, analyzeBiaxial, polygonProperties } from './utils/beamCalculations';
 import generatePdfReport from './utils/generatePdfReport';
 import './App.css';
 
@@ -46,16 +48,25 @@ export default function App() {
         if (l.area <= 0) {
           throw new Error(`Layer ${i + 1}: steel area must be positive.`);
         }
+        if (sec.bendingMode === 'biaxial' && (l.x === undefined || Number.isNaN(l.x))) {
+          throw new Error(`Layer ${i + 1}: lateral location x is required for biaxial bending.`);
+        }
       }
 
-      const res = analyzeBeam(sec, layers);
-
-      const totalSteel = res.layerResults.reduce((s, lr) => s + lr.force, 0);
-      const equilibriumError = Math.abs(res.Cc - totalSteel);
-      if (equilibriumError > 0.1) {
-        throw new Error(
-          `Solution did not converge. Equilibrium error = ${equilibriumError.toFixed(3)} kips. Check your inputs.`
-        );
+      let res;
+      if (sec.bendingMode === 'biaxial') {
+        res = analyzeBiaxial(sec, layers, {
+          Mux: sec.Mux, Muy: sec.Muy, MxService: sec.MxService, MyService: sec.MyService,
+        });
+      } else {
+        res = analyzeBeam(sec, layers);
+        const totalSteel = res.layerResults.reduce((s, lr) => s + lr.force, 0);
+        const equilibriumError = Math.abs(res.Cc - totalSteel);
+        if (equilibriumError > 0.1) {
+          throw new Error(
+            `Solution did not converge. Equilibrium error = ${equilibriumError.toFixed(3)} kips. Check your inputs.`
+          );
+        }
       }
 
       setResults(res);
@@ -94,7 +105,7 @@ export default function App() {
               Flexural strength analysis using the Devalapura&#8211;Tadros / PCI power formula
             </p>
           </div>
-          {results && (
+          {results && results.mode !== 'biaxial' && (
             <button
               type="button"
               className="btn-export-pdf"
@@ -127,7 +138,12 @@ export default function App() {
             </div>
           )}
 
-          {results && (
+          {results && results.mode === 'biaxial' && (
+            <div className="results-column" ref={resultsRef}>
+              <BiaxialResults results={results} />
+            </div>
+          )}
+          {results && results.mode !== 'biaxial' && (
             <div className="results-column" ref={resultsRef}>
               <DesignGauges results={results} />
               <ResultsPanel results={results} />
@@ -135,7 +151,14 @@ export default function App() {
           )}
         </div>
 
-        {results && (
+        {results && results.mode === 'biaxial' && (
+          <div className="diagrams-section">
+            <div className="diagrams-row">
+              <InteractionDiagram results={results} />
+            </div>
+          </div>
+        )}
+        {results && results.mode !== 'biaxial' && (
           <div className="diagrams-section">
             <div className="diagrams-row">
               <BeamDiagram section={section} results={results} />
