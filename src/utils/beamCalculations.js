@@ -757,3 +757,421 @@ export function prestressAndCracking(section, steelLayers, phiMn) {
     sectionProps,
   };
 }
+
+// ─── Biaxial bending ─────────────────────────────────────────────────────────
+/**
+ * Biaxial flexural analysis via neutral-axis-orientation sweep.
+ *
+ * The neutral axis is an inclined line; sweeping its orientation traces the
+ * full φMx–φMy flexural interaction envelope (no external axial load — prestress
+ * is internal, so ΣF_internal = 0 at every orientation, as in the uniaxial case).
+ *
+ * Sign convention: x to the right, y downward from the top fiber. Axial force is
+ * positive in tension. Positive Mx causes tension at the bottom fiber (+y);
+ * positive My causes tension at the right fiber (+x).
+ *
+ * Each section is reduced to polygon rings (outer + holes). The compression
+ * block at a given orientation is the section clipped to the half-plane within
+ * the Whitney depth a = β₁c of the extreme compression fiber.
+ */
+
+// Convert any supported section to polygon rings { outer:[{x,y}], holes:[[...]] }.
+export function sectionToPolygon(section) {
+  const { sectionType, h } = section;
+  const rect = (x0, x1, y0, y1) => [
+    { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
+  ];
+
+  switch (sectionType) {
+    case 'custom':
+      return { outer: section.points, holes: section.holes || [] };
+
+    case 'rectangular': {
+      const b = section.bw;
+      return { outer: rect(0, b, 0, h), holes: [] };
+    }
+
+    case 'tbeam': {
+      const { bf, bw, hf } = section;
+      const off = (bf - bw) / 2;
+      return {
+        outer: [
+          { x: 0, y: 0 }, { x: bf, y: 0 }, { x: bf, y: hf },
+          { x: off + bw, y: hf }, { x: off + bw, y: h },
+          { x: off, y: h }, { x: off, y: hf }, { x: 0, y: hf },
+        ],
+        holes: [],
+      };
+    }
+
+    case 'sandwich': {
+      const { bt, ht, hg, bb } = section;
+      const totW = Math.max(bt, bb);
+      const topOff = (totW - bt) / 2;
+      const botOff = (totW - bb) / 2;
+      // Two stacked rectangles modeled as one polygon ring is impossible (gap),
+      // so represent as outer = top rect, plus the bottom rect treated as a
+      // second positive region. We approximate by returning the union via a
+      // degenerate connector is avoided: callers iterate rings, so expose both
+      // as separate "outer" pieces using a multiPolygon flag.
+      return {
+        outer: rect(topOff, topOff + bt, 0, ht),
+        holes: [],
+        extra: [rect(botOff, botOff + bb, ht + hg, h)],
+      };
+    }
+
+    case 'doubletee': {
+      const { bf, hf, numStems = 2, stemWidth } = section;
+      const spacing = bf / (numStems + 1);
+      const ring = [{ x: 0, y: 0 }, { x: bf, y: 0 }, { x: bf, y: hf }];
+      for (let i = numStems - 1; i >= 0; i--) {
+        const cxs = spacing * (i + 1);
+        ring.push({ x: cxs + stemWidth / 2, y: hf });
+        ring.push({ x: cxs + stemWidth / 2, y: h });
+        ring.push({ x: cxs - stemWidth / 2, y: h });
+        ring.push({ x: cxs - stemWidth / 2, y: hf });
+      }
+      ring.push({ x: 0, y: hf });
+      return { outer: ring, holes: [] };
+    }
+
+    case 'hollowcore': {
+      const { bf, numVoids, voidDiameter, voidCenterDepth } = section;
+      const r = voidDiameter / 2;
+      const spacing = bf / (numVoids + 1);
+      const holes = [];
+      const SEG = 32;
+      for (let i = 0; i < numVoids; i++) {
+        const cxv = spacing * (i + 1);
+        const ring = [];
+        for (let k = 0; k < SEG; k++) {
+          const t = (k / SEG) * 2 * Math.PI;
+          ring.push({ x: cxv + r * Math.cos(t), y: voidCenterDepth + r * Math.sin(t) });
+        }
+        holes.push(ring);
+      }
+      return { outer: rect(0, bf, 0, h), holes };
+    }
+
+    default: {
+      const b = section.bf || section.bw;
+      return { outer: rect(0, b, 0, h), holes: [] };
+    }
+  }
+}
+
+// Flatten a polygon spec into an array of positive rings and an array of holes.
+function ringsOf(polySpec) {
+  const positive = [polySpec.outer, ...(polySpec.extra || [])].filter((r) => r && r.length >= 3);
+  const holes = (polySpec.holes || []).filter((r) => r && r.length >= 3);
+  return { positive, holes };
+}
+
+// Shoelace integrals of a single ring, normalized to a positive (CCW) area.
+function ringIntegrals(ring) {
+  let A2 = 0, Sx = 0, Sy = 0, Ix = 0, Iy = 0, Ixy = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const p = ring[i], q = ring[(i + 1) % ring.length];
+    const cr = p.x * q.y - q.x * p.y;
+    A2 += cr;
+    Sx += (p.x + q.x) * cr;
+    Sy += (p.y + q.y) * cr;
+    Ix += (p.y * p.y + p.y * q.y + q.y * q.y) * cr;
+    Iy += (p.x * p.x + p.x * q.x + q.x * q.x) * cr;
+    Ixy += (p.x * q.y + 2 * p.x * p.y + 2 * q.x * q.y + q.x * p.y) * cr;
+  }
+  const signedA = A2 / 2;
+  const s = signedA < 0 ? -1 : 1; // normalize to positive area
+  return {
+    A: Math.abs(signedA),
+    Sx: s * Sx / 6,
+    Sy: s * Sy / 6,
+    Ix: s * Ix / 12,
+    Iy: s * Iy / 12,
+    Ixy: s * Ixy / 24,
+  };
+}
+
+/**
+ * Full gross section properties about the centroid for a polygon spec.
+ * Returns { A, xCg, yCg, Ix, Iy, Ixy, corners } where corners are the outer
+ * vertices expressed relative to the centroid (extreme-fiber candidates).
+ */
+export function polygonFullProperties(polySpec) {
+  const { positive, holes } = ringsOf(polySpec);
+  let A = 0, Sx = 0, Sy = 0, Ix0 = 0, Iy0 = 0, Ixy0 = 0;
+  const add = (ri, sign) => {
+    A += sign * ri.A; Sx += sign * ri.Sx; Sy += sign * ri.Sy;
+    Ix0 += sign * ri.Ix; Iy0 += sign * ri.Iy; Ixy0 += sign * ri.Ixy;
+  };
+  for (const r of positive) add(ringIntegrals(r), 1);
+  for (const r of holes) add(ringIntegrals(r), -1);
+  const xCg = A > 1e-12 ? Sx / A : 0;
+  const yCg = A > 1e-12 ? Sy / A : 0;
+  const Ix = Ix0 - A * yCg * yCg;
+  const Iy = Iy0 - A * xCg * xCg;
+  const Ixy = Ixy0 - A * xCg * yCg;
+  const corners = positive.flatMap((r) => r.map((p) => ({ x: p.x - xCg, y: p.y - yCg })));
+  return { A, xCg, yCg, Ix, Iy, Ixy, corners };
+}
+
+// Clip a ring to the half-plane proj·m >= threshold; return clipped ring.
+function clipRingByLine(ring, m, threshold) {
+  const out = [];
+  const proj = (p) => p.x * m.x + p.y * m.y;
+  for (let i = 0; i < ring.length; i++) {
+    const cur = ring[i], nxt = ring[(i + 1) % ring.length];
+    const dc = proj(cur) - threshold, dn = proj(nxt) - threshold;
+    if (dc >= 0) out.push(cur);
+    if ((dc >= 0) !== (dn >= 0)) {
+      const t = dc / (dc - dn);
+      out.push({ x: cur.x + t * (nxt.x - cur.x), y: cur.y + t * (nxt.y - cur.y) });
+    }
+  }
+  return out;
+}
+
+// Net area + centroid of a polygon spec clipped to proj·m >= threshold.
+function clippedAreaCentroid(polySpec, m, threshold) {
+  const { positive, holes } = ringsOf(polySpec);
+  let A = 0, Sx = 0, Sy = 0;
+  const acc = (ring, sign) => {
+    if (ring.length < 3) return;
+    const ri = ringIntegrals(ring);
+    A += sign * ri.A; Sx += sign * ri.Sx; Sy += sign * ri.Sy;
+  };
+  for (const r of positive) acc(clipRingByLine(r, m, threshold), 1);
+  for (const r of holes) acc(clipRingByLine(r, m, threshold), -1);
+  return { A, cx: A > 1e-12 ? Sx / A : 0, cy: A > 1e-12 ? Sy / A : 0 };
+}
+
+/**
+ * Solve flexural capacity for one neutral-axis orientation.
+ * @param phi compression-normal direction angle (NA is perpendicular).
+ * Returns moments (kip-in) and φ-reduced moments about the centroid.
+ */
+export function biaxialAtOrientation(polySpec, steelLayers, props, fc, phi) {
+  const m = { x: Math.cos(phi), y: Math.sin(phi) };
+  const projAll = polySpec.outer.concat(polySpec.extra || []).map((p) => p.x * m.x + p.y * m.y);
+  const projMax = Math.max(...projAll);
+  const projMin = Math.min(...projAll);
+  const b1 = beta1(fc);
+  const depthOf = (p) => projMax - (p.x * m.x + p.y * m.y);
+
+  // Bisection on NA depth c for ΣF = 0.
+  let lo = 1e-4, hi = projMax - projMin, c = (lo + hi) / 2;
+  for (let it = 0; it < 200; it++) {
+    c = (lo + hi) / 2;
+    const a = b1 * c;
+    const Cc = 0.85 * fc * clippedAreaCentroid(polySpec, m, projMax - a).A;
+    let T = 0;
+    for (const s of steelLayers) {
+      const eps = steelStrain(depthOf({ x: s.x, y: s.depth }), c, s.fse, s.steel.Es);
+      T += powerFormulaStress(eps, s.steel) * s.area;
+    }
+    const residual = T - Cc;
+    if (Math.abs(residual) < 1e-6) break;
+    if (residual > 0) lo = c; else hi = c;
+  }
+
+  const a = b1 * c;
+  const cc = clippedAreaCentroid(polySpec, m, projMax - a);
+  const Cc = 0.85 * fc * cc.A;
+  let Mx = -Cc * (cc.cy - props.yCg);
+  let My = -Cc * (cc.cx - props.xCg);
+  let epsT = -Infinity, epsTy = 0.002;
+  const layerResults = [];
+  for (const s of steelLayers) {
+    const d = depthOf({ x: s.x, y: s.depth });
+    const eps = steelStrain(d, c, s.fse, s.steel.Es);
+    const fs = powerFormulaStress(eps, s.steel);
+    const F = fs * s.area;
+    Mx += F * (s.depth - props.yCg);
+    My += F * (s.x - props.xCg);
+    layerResults.push({ ...s, strain: eps, stress: fs, force: F });
+    if (eps > epsT) { epsT = eps; epsTy = s.steel.fpy / s.steel.Es; }
+  }
+  const phiF = phiFactor(epsT, epsTy);
+  return {
+    phi, c, a, m, Mx, My, phiMx: phiF * Mx, phiMy: phiF * My,
+    phiF, epsT, layerResults,
+  };
+}
+
+// Radius (capacity magnitude) of an envelope at a given demand angle, via
+// ray–polygon intersection. envelope = ordered [{phiMx, phiMy}] closed loop.
+function envelopeRadiusAtAngle(envelope, angle) {
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  let best = Infinity;
+  for (let i = 0; i < envelope.length; i++) {
+    const a = envelope[i], b = envelope[(i + 1) % envelope.length];
+    const ex = b.phiMx - a.phiMx, ey = b.phiMy - a.phiMy;
+    const denom = dx * ey - dy * ex;
+    if (Math.abs(denom) < 1e-12) continue;
+    const t = (a.phiMx * ey - a.phiMy * ex) / denom; // distance along ray
+    const u = (a.phiMx * dy - a.phiMy * dx) / denom; // param along segment
+    if (t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9) best = Math.min(best, t);
+  }
+  return best;
+}
+
+/**
+ * Biaxial cracking interaction (linear-elastic, unsymmetric bending).
+ * Each outer corner gives a half-plane constraint in (Mx, My) space; their
+ * intersection is the uncracked envelope. Returns axis intercepts and the
+ * utilization of the service moment point.
+ */
+export function biaxialCracking(props, steelLayers, fc, MxService, MyService) {
+  const { A, Ix, Iy, Ixy, corners } = props;
+  const det = Ix * Iy - Ixy * Ixy;
+  const fr = 7.5 * Math.sqrt(fc * 1000) / 1000;
+
+  // Prestress force and centroidal eccentricity.
+  let P = 0, Pex = 0, Pey = 0;
+  for (const s of steelLayers) {
+    if (s.fse > 0) {
+      const f = s.fse * s.area;
+      P += f;
+      Pex += f * (s.x - props.xCg);
+      Pey += f * (s.depth - props.yCg);
+    }
+  }
+  const ex = P > 0 ? Pex / P : 0;
+  const ey = P > 0 ? Pey / P : 0;
+
+  // Stress at corner from a unit-free linear field:
+  //   σ(x,y) = -P/A + Mx*kx(x,y) + My*ky(x,y) + prestressMoment terms
+  // where (unsymmetric bending, tension positive at +y for +Mx):
+  const kx = (x, y) => (Iy * y - Ixy * x) / det;       // coefficient on Mx
+  const ky = (x, y) => (Ix * x - Ixy * y) / det;       // coefficient on My
+  // Prestress contributes moments (-P*ey about x, -P*ex about y).
+  const sigmaConst = (x, y) =>
+    -P / A + (-P * ey) * kx(x, y) + (-P * ex) * ky(x, y);
+
+  // Cracking when σ >= fr at any corner:  Mx*kx + My*ky >= fr - sigmaConst
+  const constraints = corners.map(({ x, y }) => ({
+    aMx: kx(x, y),
+    aMy: ky(x, y),
+    rhs: fr - sigmaConst(x, y),
+    corner: { x, y },
+  })).filter((c) => c.rhs > 0); // ignore corners already in tension at service P only
+
+  const intercept = (useX, sign) => {
+    // Largest |M| along one axis (other moment 0) before any corner cracks.
+    let limit = Infinity;
+    for (const c of constraints) {
+      const a = useX ? c.aMx : c.aMy;
+      if (sign * a > 1e-12) limit = Math.min(limit, c.rhs / (sign * a));
+    }
+    return Number.isFinite(limit) ? sign * limit : null;
+  };
+
+  const Mcr = {
+    xPos: intercept(true, 1), xNeg: intercept(true, -1),
+    yPos: intercept(false, 1), yNeg: intercept(false, -1),
+  };
+
+  // Service utilization: max over corners of (demand·a)/rhs.
+  let U = 0, governing = null;
+  const MxIn = MxService * 12, MyIn = MyService * 12; // kip-ft -> kip-in
+  for (const c of constraints) {
+    const u = (MxIn * c.aMx + MyIn * c.aMy) / c.rhs;
+    if (u > U) { U = u; governing = c.corner; }
+  }
+
+  // Sampled cracking-envelope boundary (kip-ft) for plotting. At each angle,
+  // find the radial scale where the first corner reaches fr.
+  const SAMP = 180;
+  const envelope = [];
+  for (let i = 0; i < SAMP; i++) {
+    const ang = (i / SAMP) * 2 * Math.PI;
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    let maxRate = 0; // max over corners of (dir·a)/rhs per kip-in
+    for (const c of constraints) {
+      const rate = (dx * c.aMx + dy * c.aMy) / c.rhs;
+      if (rate > maxRate) maxRate = rate;
+    }
+    // Mxy magnitude (kip-in) at boundary = 1/maxRate; convert to kip-ft.
+    const rIn = maxRate > 1e-12 ? 1 / maxRate : null;
+    if (rIn != null) envelope.push({ Mx: (dx * rIn) / 12, My: (dy * rIn) / 12 });
+  }
+
+  return {
+    P, ex, ey, fr, det,
+    Mcr,
+    McrFt: {
+      xPos: Mcr.xPos != null ? Mcr.xPos / 12 : null,
+      xNeg: Mcr.xNeg != null ? Mcr.xNeg / 12 : null,
+      yPos: Mcr.yPos != null ? Mcr.yPos / 12 : null,
+      yNeg: Mcr.yNeg != null ? Mcr.yNeg / 12 : null,
+    },
+    utilization: U,
+    cracks: U > 1,
+    governing,
+    envelope,
+  };
+}
+
+/**
+ * Top-level biaxial analysis. Returns the strength envelope, on-axis (NA-aligned)
+ * capacities φMnx/φMny, demand utilization, and the biaxial cracking check.
+ */
+export function analyzeBiaxial(section, steelLayers, opts = {}) {
+  const { Mux = 0, Muy = 0, MxService = 0, MyService = 0, samples = 180 } = opts;
+  const polySpec = sectionToPolygon(section);
+  const props = polygonFullProperties(polySpec);
+  const fc = section.fc;
+
+  // Sweep orientations -> envelope (kip-ft).
+  const raw = [];
+  for (let i = 0; i < samples; i++) {
+    const phi = (i / samples) * 2 * Math.PI;
+    const r = biaxialAtOrientation(polySpec, steelLayers, props, fc, phi);
+    raw.push(r);
+  }
+  const envelope = raw.map((r) => ({
+    theta: r.phi, phiMx: r.phiMx / 12, phiMy: r.phiMy / 12,
+    Mx: r.Mx / 12, My: r.My / 12, phiF: r.phiF, c: r.c,
+  }));
+
+  // NA-aligned anchors (exact orientations). m direction:
+  //   compression at top (sag, +Mx)  -> m = (0,-1)  -> phi = 3π/2
+  //   compression at bottom (hog)     -> m = (0, 1)  -> phi = π/2
+  //   compression at right (+My)      -> m = (1, 0)  -> phi = 0
+  //   compression at left  (-My)      -> m = (-1,0)  -> phi = π
+  const anchor = (phi) => {
+    const r = biaxialAtOrientation(polySpec, steelLayers, props, fc, phi);
+    return {
+      phiMx: r.phiMx / 12, phiMy: r.phiMy / 12, Mx: r.Mx / 12, My: r.My / 12,
+      phi: r.phiF, c: r.c, epsT: r.epsT, layerResults: r.layerResults,
+    };
+  };
+  const anchors = {
+    xSag: anchor(3 * Math.PI / 2),
+    xHog: anchor(Math.PI / 2),
+    yPos: anchor(0),
+    yNeg: anchor(Math.PI),
+  };
+
+  // Demand utilization (radial).
+  let demand = null;
+  if (Mux !== 0 || Muy !== 0) {
+    const ang = Math.atan2(Muy, Mux);
+    const cap = envelopeRadiusAtAngle(envelope, ang);
+    const dem = Math.hypot(Mux, Muy);
+    demand = {
+      Mux, Muy, angle: ang, capacity: cap, magnitude: dem,
+      utilization: Number.isFinite(cap) ? dem / cap : Infinity,
+      pass: Number.isFinite(cap) && dem <= cap,
+    };
+  }
+
+  const cracking = biaxialCracking(props, steelLayers, fc, MxService, MyService);
+
+  return {
+    mode: 'biaxial',
+    section, props, envelope, anchors, demand, cracking,
+    sectionPolygon: polySpec,
+  };
+}

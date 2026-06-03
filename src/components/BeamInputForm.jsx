@@ -27,12 +27,19 @@ const DEFAULT_SECTION = {
   // y measured downward from the extreme compression fiber).
   points: [],
   holes: [],
+  // Bending mode and biaxial demands (kip-ft). bendingMode: 'uniaxial' | 'biaxial'
+  bendingMode: 'uniaxial',
+  Mux: 0,
+  Muy: 0,
+  MxService: 0,
+  MyService: 0,
 };
 
 const DEFAULT_LAYER = {
   steelPresetId: 'grade270',
   area: 0.153,
   depth: 3,
+  x: 8,   // lateral location from left fiber (in) — biaxial mode only
   fse: 170,
 };
 
@@ -153,18 +160,9 @@ export default function BeamInputForm({ onCalculate }) {
         holes: section.holes || [],
         h: parseFloat(section.h),
         fc: parseFloat(section.fc),
+        ...biaxialFields(),
       };
-      const finalLayers = layers.map((l) => {
-        const preset = steelPresets.find((p) => p.id === l.steelPresetId);
-        return {
-          area: parseFloat(l.area),
-          depth: parseFloat(l.depth),
-          fse: parseFloat(l.fse) || 0,
-          steel: preset,
-          name: preset.name,
-        };
-      });
-      onCalculate(finalSection, finalLayers);
+      onCalculate(finalSection, buildLayers());
       return;
     }
 
@@ -189,19 +187,31 @@ export default function BeamInputForm({ onCalculate }) {
       numVoids: parseInt(section.numVoids) || 0,
       voidDiameter: parseFloat(section.voidDiameter) || 0,
       voidCenterDepth: parseFloat(section.voidCenterDepth) || parseFloat(section.h) / 2,
+      ...biaxialFields(),
     };
-    const finalLayers = layers.map((l) => {
+    onCalculate(finalSection, buildLayers());
+  };
+
+  // Shared helpers for both section paths.
+  const biaxialFields = () => ({
+    bendingMode: section.bendingMode || 'uniaxial',
+    Mux: parseFloat(section.Mux) || 0,
+    Muy: parseFloat(section.Muy) || 0,
+    MxService: parseFloat(section.MxService) || 0,
+    MyService: parseFloat(section.MyService) || 0,
+  });
+  const buildLayers = () =>
+    layers.map((l) => {
       const preset = steelPresets.find((p) => p.id === l.steelPresetId);
       return {
         area: parseFloat(l.area),
         depth: parseFloat(l.depth),
+        x: parseFloat(l.x) || 0,
         fse: parseFloat(l.fse) || 0,
         steel: preset,
         name: preset.name,
       };
     });
-    onCalculate(finalSection, finalLayers);
-  };
 
   return (
     <form onSubmit={handleSubmit} className="input-form">
@@ -233,6 +243,27 @@ export default function BeamInputForm({ onCalculate }) {
             </select>
           </label>
         </div>
+
+        <div className="form-row">
+          <label>
+            <span className="label-text">Bending</span>
+            <select
+              value={section.bendingMode}
+              onChange={(e) => handleSectionChange('bendingMode', e.target.value)}
+            >
+              <option value="uniaxial">Uniaxial (about x)</option>
+              <option value="biaxial">Biaxial (Mx &amp; My)</option>
+            </select>
+          </label>
+        </div>
+
+        {section.bendingMode === 'biaxial' && (
+          <div className="biaxial-note">
+            Biaxial mode builds the full φMx–φMy interaction envelope. Specify each
+            layer&apos;s lateral location <em>x</em> (from the left fiber). Sign convention:
+            +Mx = tension at bottom, +My = tension at right.
+          </div>
+        )}
 
         {section.sectionType === 'custom' && (
           <>
@@ -560,6 +591,17 @@ export default function BeamInputForm({ onCalculate }) {
                     onChange={(e) => handleLayerChange(layer.id, 'depth', e.target.value)}
                   />
                 </label>
+                {section.bendingMode === 'biaxial' && (
+                  <label>
+                    <span className="label-text">Lateral, x (in)</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={layer.x}
+                      onChange={(e) => handleLayerChange(layer.id, 'x', e.target.value)}
+                    />
+                  </label>
+                )}
                 <label className={isMild ? 'disabled-field' : ''}>
                   <span className="label-text">f<sub>se</sub> (ksi)</span>
                   <input
@@ -589,6 +631,47 @@ export default function BeamInputForm({ onCalculate }) {
           + Add Steel Layer
         </button>
       </div>
+
+      {section.bendingMode === 'biaxial' && (
+        <div className="form-section">
+          <h3>
+            <span className="section-icon">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </span>
+            Biaxial Demands
+          </h3>
+          <div className="layers-info">
+            Factored moments drive the strength utilization; service moments drive the
+            cracking check. Leave at 0 to report capacities only. Units: kip-ft.
+          </div>
+          <div className="form-row">
+            <label>
+              <span className="label-text">M<sub>ux</sub> (factored)</span>
+              <input type="number" step="1" value={section.Mux}
+                onChange={(e) => handleSectionChange('Mux', e.target.value)} />
+            </label>
+            <label>
+              <span className="label-text">M<sub>uy</sub> (factored)</span>
+              <input type="number" step="1" value={section.Muy}
+                onChange={(e) => handleSectionChange('Muy', e.target.value)} />
+            </label>
+          </div>
+          <div className="form-row">
+            <label>
+              <span className="label-text">M<sub>x</sub> (service)</span>
+              <input type="number" step="1" value={section.MxService}
+                onChange={(e) => handleSectionChange('MxService', e.target.value)} />
+            </label>
+            <label>
+              <span className="label-text">M<sub>y</sub> (service)</span>
+              <input type="number" step="1" value={section.MyService}
+                onChange={(e) => handleSectionChange('MyService', e.target.value)} />
+            </label>
+          </div>
+        </div>
+      )}
 
       <button type="submit" className="btn-calculate">
         Calculate Beam Strength
