@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
  * downward — the same depth-from-top convention used by the analysis engine.
  *
  * Controls:
- *   Arrow keys  – move the cursor by one grid step (Shift = fine step)
+ *   Arrow keys  – move the cursor by the current step (settable, default 0.25")
  *   Spacebar    – drop a node at the cursor
  *   Backspace   – undo the last node
  *   Enter        – close the current ring back to its first node
@@ -19,8 +19,7 @@ import { useEffect, useRef, useState } from 'react';
  */
 
 const GRID = 48;          // drawing domain in inches (GRID × GRID)
-const STEP = 1;           // coarse cursor step (in)
-const FINE_STEP = 0.25;   // fine cursor step with Shift (in)
+const DEFAULT_STEP = 0.25; // default cursor increment (in)
 const PX = 9;             // pixels per inch
 const PAD = 24;           // svg padding (px)
 const SNAP = 1.0;         // snap-to-first-node radius (in)
@@ -37,8 +36,12 @@ export default function SectionDrawer({ value, onChange }) {
     }
     return [{ points: [], closed: false }];
   });
-  const [cursor, setCursor] = useState({ x: Math.round(GRID / 2), y: Math.round(GRID / 2) });
+  const [cursor, setCursor] = useState({ x: GRID / 2, y: GRID / 2 });
+  const [step, setStep] = useState(DEFAULT_STEP); // arrow-key increment (in)
   const svgRef = useRef(null);
+
+  // Round a value to the current step so the cursor stays on the increment grid.
+  const snapToStep = (v) => Math.round(v / step) * step;
 
   // Index of the ring currently being drawn (the last open ring, if any).
   const activeIdx = rings.findIndex((r) => !r.closed);
@@ -63,9 +66,12 @@ export default function SectionDrawer({ value, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rings]);
 
-  const moveCursor = (dx, dy, fine) => {
-    const step = fine ? FINE_STEP : STEP;
-    setCursor((c) => ({ x: clamp(c.x + dx * step), y: clamp(c.y + dy * step) }));
+  const moveCursor = (dx, dy) => {
+    // Snap to the step grid first so changing the step realigns the cursor.
+    setCursor((c) => ({
+      x: clamp(snapToStep(c.x) + dx * step),
+      y: clamp(snapToStep(c.y) + dy * step),
+    }));
   };
 
   const dropNode = (pt) => {
@@ -130,12 +136,11 @@ export default function SectionDrawer({ value, onChange }) {
   const clearAll = () => setRings([{ points: [], closed: false }]);
 
   const handleKeyDown = (e) => {
-    const fine = e.shiftKey;
     switch (e.key) {
-      case 'ArrowUp': e.preventDefault(); moveCursor(0, -1, fine); break;
-      case 'ArrowDown': e.preventDefault(); moveCursor(0, 1, fine); break;
-      case 'ArrowLeft': e.preventDefault(); moveCursor(-1, 0, fine); break;
-      case 'ArrowRight': e.preventDefault(); moveCursor(1, 0, fine); break;
+      case 'ArrowUp': e.preventDefault(); moveCursor(0, -1); break;
+      case 'ArrowDown': e.preventDefault(); moveCursor(0, 1); break;
+      case 'ArrowLeft': e.preventDefault(); moveCursor(-1, 0); break;
+      case 'ArrowRight': e.preventDefault(); moveCursor(1, 0); break;
       case ' ': e.preventDefault(); dropNode(cursor); break;
       case 'Backspace': e.preventDefault(); undoNode(); break;
       case 'Enter': e.preventDefault(); closeRing(); break;
@@ -143,13 +148,13 @@ export default function SectionDrawer({ value, onChange }) {
     }
   };
 
-  // Mouse → snap to nearest fine step.
+  // Mouse → snap to the current step grid.
   const handleSvgMouse = (e, place) => {
     const rect = svgRef.current.getBoundingClientRect();
     const sx = (rect.width) / (GRID * PX + PAD * 2);
     const sy = (rect.height) / (GRID * PX + PAD * 2);
-    const ix = clamp(Math.round(((e.clientX - rect.left) / sx - PAD) / PX / FINE_STEP) * FINE_STEP);
-    const iy = clamp(Math.round(((e.clientY - rect.top) / sy - PAD) / PX / FINE_STEP) * FINE_STEP);
+    const ix = clamp(snapToStep(((e.clientX - rect.left) / sx - PAD) / PX));
+    const iy = clamp(snapToStep(((e.clientY - rect.top) / sy - PAD) / PX));
     setCursor({ x: ix, y: iy });
     if (place) dropNode({ x: ix, y: iy });
   };
@@ -175,7 +180,35 @@ export default function SectionDrawer({ value, onChange }) {
       <div className="drawer-hint">
         <strong>Arrow keys</strong> move &middot; <strong>Space</strong> drop node &middot;{' '}
         <strong>Backspace</strong> undo &middot; <strong>Enter</strong> close shape &middot;{' '}
-        click the first node to close. Hold <strong>Shift</strong> for {FINE_STEP}&quot; steps.
+        click the first node to close.
+      </div>
+
+      <div className="drawer-step">
+        <label>
+          <span className="label-text">Cursor step (in)</span>
+          <input
+            type="number"
+            step="0.05"
+            min="0.05"
+            value={step}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v > 0) setStep(v);
+            }}
+          />
+        </label>
+        <div className="drawer-step-presets">
+          {[0.125, 0.25, 0.5, 1, 2].map((s) => (
+            <button
+              key={s}
+              type="button"
+              className={step === s ? 'active' : ''}
+              onClick={() => setStep(s)}
+            >
+              {s}&quot;
+            </button>
+          ))}
+        </div>
       </div>
 
       <div
