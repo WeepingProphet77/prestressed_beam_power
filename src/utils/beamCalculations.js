@@ -17,6 +17,17 @@ export function beta1(fc) {
 }
 
 /**
+ * Concrete modulus of elasticity for normalweight concrete per ACI 318-19
+ * §19.2.2.1(b):  Ec = 57000·√f'c  (psi).  Returns ksi.
+ * (Lightweight concrete has a lower Ec that depends on unit weight wc; that
+ * refinement is not modeled here, so decompression strain is conservative —
+ * i.e. slightly under-predicted — for lightweight sections.)
+ */
+export function concreteModulus(fc) {
+  return 57 * Math.sqrt(fc * 1000); // 57000·√(f'c_psi) / 1000  →  ksi
+}
+
+/**
  * Strength reduction factor φ per ACI 318-19 §21.2
  * Based on net tensile strain in the extreme tension steel layer.
  * εty = fpy / Es  (yield strain of outermost tension steel)
@@ -80,23 +91,62 @@ export function generateStressStrainCurve(steel, numPoints = 200) {
 // ─── Strain compatibility ───────────────────────────────────────────────────
 
 /**
- * Total steel strain at layer i using strain compatibility.
+ * Total steel strain at layer i using strain compatibility, summing the three
+ * components used in bonded prestressed strain compatibility (PCI / ACI 318):
  *
- *   εsi = εcu · (di / c − 1) + εso
+ *   εsi = εcu · (di / c − 1)   (flexural strain at the steel level)
+ *       + fse / Es             (effective prestrain, 0 for mild steel)
+ *       + εdecomp              (concrete decompression strain at the steel level)
  *
- * where εso = fse / Es  (initial strain from effective prestress, 0 for mild steel)
- * εcu = 0.003 per ACI 318
+ * εcu = 0.003 per ACI 318. The decompression term is the strain required to
+ * bring the concrete at the strand level back to zero stress; it applies only
+ * to bonded prestressed layers (fse > 0) and is supplied by the caller because
+ * it depends on gross-section properties. Mild (non-tensioned) steel carries no
+ * prestrain or decompression offset, so εdecomp = 0 for those layers.
  *
- * @param {number} di   – depth of steel layer from extreme compression fiber (in)
- * @param {number} c    – neutral-axis depth from extreme compression fiber (in)
- * @param {number} fse  – effective prestress after losses (ksi), 0 for mild steel
- * @param {number} Es   – steel modulus (ksi)
+ * @param {number} di        – depth of steel layer from extreme compression fiber (in)
+ * @param {number} c         – neutral-axis depth from extreme compression fiber (in)
+ * @param {number} fse       – effective prestress after losses (ksi), 0 for mild steel
+ * @param {number} Es        – steel modulus (ksi)
+ * @param {number} epsDecomp – concrete decompression strain at this layer (default 0)
  * @returns {number} total strain (positive = tension)
  */
-export function steelStrain(di, c, fse, Es) {
+export function steelStrain(di, c, fse, Es, epsDecomp = 0) {
   const ecu = 0.003;
   const eso = fse / Es; // initial prestrain
-  return ecu * (di / c - 1) + eso;
+  return ecu * (di / c - 1) + eso + epsDecomp;
+}
+
+/**
+ * Concrete decompression strain at each steel layer, for bonded prestressed
+ * layers (fse > 0). Returns an array aligned with steelLayers; entries for
+ * non-prestressed layers are 0.
+ *
+ * Concrete compressive stress at the level of layer i due to the effective
+ * prestress force P acting at eccentricity e_ps (uniaxial, gross section):
+ *   f_ci = P/A + P·e_ps·y_i / Ig         (compression positive)
+ * where y_i = d_i − ȳ_cg. The decompression strain is f_ci / Ec.
+ */
+export function decompressionStrains(steelLayers, sectionProps, fc) {
+  const { A, yCg, Ig } = sectionProps;
+  const Ec = concreteModulus(fc);
+  let P = 0;
+  let PdMoment = 0;
+  for (const l of steelLayers) {
+    if (l.fse > 0) {
+      const f = l.fse * l.area;
+      P += f;
+      PdMoment += f * l.depth;
+    }
+  }
+  const yps = P > 0 ? PdMoment / P : yCg;
+  const ePs = yps - yCg;
+  return steelLayers.map((l) => {
+    if (!(l.fse > 0) || !(Ig > 0) || !(A > 0)) return 0;
+    const yi = l.depth - yCg;
+    const fci = P / A + (P * ePs * yi) / Ig;
+    return fci / Ec;
+  });
 }
 
 // ─── Section analysis (rectangular / T-beam) ────────────────────────────────
@@ -317,6 +367,11 @@ export function analyzeBeam(section, steelLayers) {
   const { bf, bw, hf, h, fc } = section;
   const b1 = beta1(fc);
 
+  // Concrete decompression strain at each layer (gross-section based, constant
+  // through the bisection since it depends only on the effective prestress).
+  const sectionProps = grossSectionProperties(section);
+  const decomp = decompressionStrains(steelLayers, sectionProps, fc);
+
   // Bisection to find c where ΣF = 0
   // Compression is positive, tension in steel at bottom is positive
   let cLow = 0.01;
@@ -324,6 +379,7 @@ export function analyzeBeam(section, steelLayers) {
   let c = h / 2;
   const maxIter = 500;
   const tolerance = 1e-6;
+  let residual = Infinity;
 
   for (let iter = 0; iter < maxIter; iter++) {
     c = (cLow + cHigh) / 2;
@@ -334,14 +390,15 @@ export function analyzeBeam(section, steelLayers) {
 
     // Steel forces (positive = tension)
     let totalSteelForce = 0;
-    for (const layer of steelLayers) {
-      const eps = steelStrain(layer.depth, c, layer.fse, layer.steel.Es);
+    for (let i = 0; i < steelLayers.length; i++) {
+      const layer = steelLayers[i];
+      const eps = steelStrain(layer.depth, c, layer.fse, layer.steel.Es, decomp[i]);
       const fs = powerFormulaStress(eps, layer.steel);
       totalSteelForce += fs * layer.area;
     }
 
     // Equilibrium: Cc − totalSteelForce = 0  (compression balances tension)
-    const residual = Cc - totalSteelForce;
+    residual = Cc - totalSteelForce;
 
     if (Math.abs(residual) < tolerance) break;
 
@@ -354,19 +411,25 @@ export function analyzeBeam(section, steelLayers) {
     }
   }
 
+  // Did the bisection actually find equilibrium within the bracket [0.01, h]?
+  // A residual that is still large means no root was bracketed (e.g. the steel
+  // cannot be balanced anywhere in the section) and the result is unreliable.
+  const converged = Math.abs(residual) < 1e-3;
+
   // Final results with converged c
   const a = b1 * c;
   const Cc = concreteCompression(fc, a, bf, bw, hf, section);
   const ccCentroid = compressionCentroid(a, bf, bw, hf, section);
 
   // Compute per-layer results
-  const layerResults = steelLayers.map((layer) => {
-    const eps = steelStrain(layer.depth, c, layer.fse, layer.steel.Es);
+  const layerResults = steelLayers.map((layer, i) => {
+    const eps = steelStrain(layer.depth, c, layer.fse, layer.steel.Es, decomp[i]);
     const fs = powerFormulaStress(eps, layer.steel);
     const force = fs * layer.area;
     return {
       ...layer,
       strain: eps,
+      epsDecomp: decomp[i],
       stress: fs,
       force,
     };
@@ -404,8 +467,16 @@ export function analyzeBeam(section, steelLayers) {
   const dt = maxDepth || 1;
   const cOverD = c / dt;
 
-  // Prestress & cracking analysis
-  const cracking = prestressAndCracking(section, steelLayers, phiMn);
+  // Prestress & cracking analysis. Mu (factored demand) is optional and, when
+  // supplied, enables the ACI 318-19 §9.6.1.3 1.33·Mu exception.
+  const MuIn = (section.Mu || 0) * 12; // kip-ft → kip-in
+  const cracking = prestressAndCracking(section, steelLayers, phiMn, MuIn);
+
+  // Factored-demand utilization (only meaningful when a demand is provided).
+  const MuFt = section.Mu || 0;
+  const demand = MuFt > 0
+    ? { MuFt, utilization: (MuFt * 12) / phiMn, pass: phiMn >= MuFt * 12 }
+    : null;
 
   return {
     c,
@@ -423,6 +494,9 @@ export function analyzeBeam(section, steelLayers) {
     cOverD,
     fc,
     section,
+    converged,
+    residual,
+    demand,
     ductile: epsilonT >= epsilonTy + 0.003,
     transition: epsilonT >= epsilonTy && epsilonT < epsilonTy + 0.003,
     cracking,
@@ -705,7 +779,7 @@ export function grossSectionProperties(section) {
  *
  * @returns { P, fpc, e, fr, Mcr, McrFt, phiMnOverMcr, passesMinStrength, sectionProps }
  */
-export function prestressAndCracking(section, steelLayers, phiMn) {
+export function prestressAndCracking(section, steelLayers, phiMn, Mu = 0) {
   const sectionProps = grossSectionProperties(section);
   const { A, yCg, Sb } = sectionProps;
 
@@ -728,19 +802,27 @@ export function prestressAndCracking(section, steelLayers, phiMn) {
   // Average precompressive stress
   const fpc = P / A;
 
-  // Modulus of rupture: fr = 7.5√f'c (psi units) → convert to ksi
+  // Modulus of rupture: fr = 7.5·λ·√f'c (psi units) → convert to ksi
+  // λ = lightweight-concrete factor per ACI 318-19 §19.2.4 (1.0 normalweight).
   // f'c is in ksi, so f'c_psi = fc × 1000
   const fc = section.fc;
-  const fr = 7.5 * Math.sqrt(fc * 1000) / 1000; // ksi
+  const lambda = section.lambda ?? 1;
+  const fr = 7.5 * lambda * Math.sqrt(fc * 1000) / 1000; // ksi
 
   // Cracking moment: Mcr = Sb × (fr + P/A + P×e/Sb)
   // = Sb × fr + Sb × P/A + P × e
   const Mcr = Sb * (fr + P / A + P * e / Sb);
   const McrFt = Mcr / 12;
 
-  // 1.2Mcr check: φMn ≥ 1.2Mcr
-  const threshold = 1.2 * Mcr;
+  // Minimum flexural strength, ACI 318-19 §9.6.1.3: φMn must be at least the
+  // lesser of 1.2·Mcr and 1.33·Mu (the 1.33·Mu relief applies only when a
+  // factored demand Mu is supplied).
+  const Mcr12 = 1.2 * Mcr;
+  const Mu133 = 1.33 * Mu;
+  const useMuRelief = Mu > 0 && Mu133 < Mcr12;
+  const threshold = useMuRelief ? Mu133 : Mcr12;
   const thresholdFt = threshold / 12;
+  const governs = useMuRelief ? '1.33Mu' : '1.2Mcr';
   const passesMinStrength = phiMn >= threshold;
 
   return {
@@ -749,10 +831,17 @@ export function prestressAndCracking(section, steelLayers, phiMn) {
     e,
     yps,
     fr,
+    lambda,
     Mcr,
     McrFt,
+    Mcr12,
+    Mcr12Ft: Mcr12 / 12,
+    Mu133,
+    Mu133Ft: Mu133 / 12,
+    Mu,
     threshold,
     thresholdFt,
+    governs,
     passesMinStrength,
     sectionProps,
   };
@@ -951,13 +1040,14 @@ function clippedAreaCentroid(polySpec, m, threshold) {
  * @param phi compression-normal direction angle (NA is perpendicular).
  * Returns moments (kip-in) and φ-reduced moments about the centroid.
  */
-export function biaxialAtOrientation(polySpec, steelLayers, props, fc, phi) {
+export function biaxialAtOrientation(polySpec, steelLayers, props, fc, phi, decomp = null) {
   const m = { x: Math.cos(phi), y: Math.sin(phi) };
   const projAll = polySpec.outer.concat(polySpec.extra || []).map((p) => p.x * m.x + p.y * m.y);
   const projMax = Math.max(...projAll);
   const projMin = Math.min(...projAll);
   const b1 = beta1(fc);
   const depthOf = (p) => projMax - (p.x * m.x + p.y * m.y);
+  const decompOf = (i) => (decomp ? decomp[i] : 0);
 
   // Bisection on NA depth c for ΣF = 0.
   let lo = 1e-4, hi = projMax - projMin, c = (lo + hi) / 2;
@@ -966,8 +1056,9 @@ export function biaxialAtOrientation(polySpec, steelLayers, props, fc, phi) {
     const a = b1 * c;
     const Cc = 0.85 * fc * clippedAreaCentroid(polySpec, m, projMax - a).A;
     let T = 0;
-    for (const s of steelLayers) {
-      const eps = steelStrain(depthOf({ x: s.x, y: s.depth }), c, s.fse, s.steel.Es);
+    for (let i = 0; i < steelLayers.length; i++) {
+      const s = steelLayers[i];
+      const eps = steelStrain(depthOf({ x: s.x, y: s.depth }), c, s.fse, s.steel.Es, decompOf(i));
       T += powerFormulaStress(eps, s.steel) * s.area;
     }
     const residual = T - Cc;
@@ -982,9 +1073,10 @@ export function biaxialAtOrientation(polySpec, steelLayers, props, fc, phi) {
   let My = -Cc * (cc.cx - props.xCg);
   let epsT = -Infinity, epsTy = 0.002;
   const layerResults = [];
-  for (const s of steelLayers) {
+  for (let i = 0; i < steelLayers.length; i++) {
+    const s = steelLayers[i];
     const d = depthOf({ x: s.x, y: s.depth });
-    const eps = steelStrain(d, c, s.fse, s.steel.Es);
+    const eps = steelStrain(d, c, s.fse, s.steel.Es, decompOf(i));
     const fs = powerFormulaStress(eps, s.steel);
     const F = fs * s.area;
     Mx += F * (s.depth - props.yCg);
@@ -1022,10 +1114,41 @@ function envelopeRadiusAtAngle(envelope, angle) {
  * intersection is the uncracked envelope. Returns axis intercepts and the
  * utilization of the service moment point.
  */
-export function biaxialCracking(props, steelLayers, fc, MxService, MyService) {
+/**
+ * Concrete decompression strain at each layer for the biaxial (unsymmetric
+ * bending) case. Mirrors decompressionStrains() but uses the full {Ix,Iy,Ixy}
+ * field. Returns an array aligned with steelLayers (0 for non-prestressed).
+ */
+export function biaxialDecompStrains(props, steelLayers, fc) {
+  const { A, Ix, Iy, Ixy, xCg, yCg } = props;
+  const det = Ix * Iy - Ixy * Ixy;
+  const Ec = concreteModulus(fc);
+  let P = 0, Pex = 0, Pey = 0;
+  for (const s of steelLayers) {
+    if (s.fse > 0) {
+      const f = s.fse * s.area;
+      P += f;
+      Pex += f * (s.x - xCg);
+      Pey += f * (s.depth - yCg);
+    }
+  }
+  const ex = P > 0 ? Pex / P : 0;
+  const ey = P > 0 ? Pey / P : 0;
+  const kx = (x, y) => (Iy * y - Ixy * x) / det;
+  const ky = (x, y) => (Ix * x - Ixy * y) / det;
+  return steelLayers.map((s) => {
+    if (!(s.fse > 0) || !(A > 0) || Math.abs(det) < 1e-12) return 0;
+    const x = s.x - xCg, y = s.depth - yCg;
+    // Concrete compressive stress (compression positive) at the layer level.
+    const comp = P / A + P * ey * kx(x, y) + P * ex * ky(x, y);
+    return comp / Ec;
+  });
+}
+
+export function biaxialCracking(props, steelLayers, fc, MxService, MyService, lambda = 1) {
   const { A, Ix, Iy, Ixy, corners } = props;
   const det = Ix * Iy - Ixy * Ixy;
-  const fr = 7.5 * Math.sqrt(fc * 1000) / 1000;
+  const fr = 7.5 * lambda * Math.sqrt(fc * 1000) / 1000;
 
   // Prestress force and centroidal eccentricity.
   let P = 0, Pex = 0, Pey = 0;
@@ -1122,12 +1245,14 @@ export function analyzeBiaxial(section, steelLayers, opts = {}) {
   const polySpec = sectionToPolygon(section);
   const props = polygonFullProperties(polySpec);
   const fc = section.fc;
+  const lambda = section.lambda ?? 1;
+  const decomp = biaxialDecompStrains(props, steelLayers, fc);
 
   // Sweep orientations -> envelope (kip-ft).
   const raw = [];
   for (let i = 0; i < samples; i++) {
     const phi = (i / samples) * 2 * Math.PI;
-    const r = biaxialAtOrientation(polySpec, steelLayers, props, fc, phi);
+    const r = biaxialAtOrientation(polySpec, steelLayers, props, fc, phi, decomp);
     raw.push(r);
   }
   const envelope = raw.map((r) => ({
@@ -1141,7 +1266,7 @@ export function analyzeBiaxial(section, steelLayers, opts = {}) {
   //   compression at right (+My)      -> m = (1, 0)  -> phi = 0
   //   compression at left  (-My)      -> m = (-1,0)  -> phi = π
   const anchor = (phi) => {
-    const r = biaxialAtOrientation(polySpec, steelLayers, props, fc, phi);
+    const r = biaxialAtOrientation(polySpec, steelLayers, props, fc, phi, decomp);
     return {
       phiMx: r.phiMx / 12, phiMy: r.phiMy / 12, Mx: r.Mx / 12, My: r.My / 12,
       phi: r.phiF, c: r.c, epsT: r.epsT, layerResults: r.layerResults,
@@ -1167,7 +1292,7 @@ export function analyzeBiaxial(section, steelLayers, opts = {}) {
     };
   }
 
-  const cracking = biaxialCracking(props, steelLayers, fc, MxService, MyService);
+  const cracking = biaxialCracking(props, steelLayers, fc, MxService, MyService, lambda);
 
   return {
     mode: 'biaxial',

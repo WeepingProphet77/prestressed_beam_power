@@ -3,8 +3,6 @@
  * Each gauge shows colored zones, threshold markers with labels, and a needle
  * indicating the current value.
  */
-import { useMemo } from 'react';
-
 // Straight-line phi: ϕ (U+03D5)
 const PHI = '\u03D5';
 
@@ -145,23 +143,20 @@ export default function DesignGauges({ results }) {
     phiMnFt,
     phiMn,
     MnFt,
-    phi,
     epsilonT,
     cOverD,
     ductile,
     transition,
     layerResults,
     cracking,
+    demand,
   } = results;
 
-  // Extreme tension layer
-  const extremeLayer = useMemo(() => {
-    let ext = layerResults[0];
-    for (const lr of layerResults) {
-      if (lr.depth > ext.depth) ext = lr;
-    }
-    return ext;
-  }, [layerResults]);
+  // Extreme tension layer (deepest)
+  let extremeLayer = layerResults[0];
+  for (const lr of layerResults) {
+    if (lr.depth > extremeLayer.depth) extremeLayer = lr;
+  }
 
   const epsilonTy = extremeLayer ? extremeLayer.steel.fpy / extremeLayer.steel.Es : 0.002;
   const tensionLimit = epsilonTy + 0.003;
@@ -252,6 +247,17 @@ export default function DesignGauges({ results }) {
 
       {/* Status badges */}
       <div className="gauge-badges">
+        {demand && (
+          <StatusBadge
+            label={`${PHI}M<sub>n</sub> &ge; M<sub>u</sub>`}
+            status={demand.pass ? 'pass' : 'fail'}
+            detail={
+              demand.pass
+                ? `${phiMnFt.toFixed(1)} ≥ ${demand.MuFt.toFixed(1)} kip-ft (util ${(demand.utilization * 100).toFixed(0)}%)`
+                : `${phiMnFt.toFixed(1)} < ${demand.MuFt.toFixed(1)} kip-ft (util ${(demand.utilization * 100).toFixed(0)}%)`
+            }
+          />
+        )}
         <StatusBadge
           label="Ductility"
           status={ductilityStatus}
