@@ -18,11 +18,12 @@ concrete members using the **power formula** methodology. It is a *capacity /
 analysis* tool: given a section and its steel, it reports φMn, the cracking
 moment, ductility classification, and pass/fail against a factored demand.
 
-The skill is **self-contained and portable**. It carries its own pinned copy of
-the analysis engine under `engine/`, so it runs anywhere Node ≥ 18 is available
-and does not depend on the surrounding repository. The engine is the single
-source of truth — **never reimplement the engineering math by hand**; always
-drive it through the scripts below.
+The skill runs standalone (anywhere Node ≥ 18 is available) but stays **linked
+to the methodology in the `prestressed_beam_power` repository**: the `engine/`
+folder is a generated copy of the repo's canonical source, refreshed with one
+command (see "Revising the skill" below). The engine is the single source of
+truth — **never reimplement the engineering math by hand**; always drive it
+through the scripts below.
 
 ## The methodology
 
@@ -168,9 +169,30 @@ For biaxial, report the `anchors` (φMnx sag/hog, φMny ±), the demand
 - This skill covers **flexure only** — not shear, deflection, transfer/release
   stresses, or anchorage. Say so if asked.
 
-## Revising the skill
+## Revising the skill — staying linked to the repo
 
-The engine under `engine/` is a pinned copy of the source app's
-`src/utils/beamCalculations.js` and `src/data/steelPresets.js`. To pick up
-upstream improvements, replace those two files with the newer versions and
-re-run the examples to confirm the regression values still hold.
+This skill is **linked to the methodology in the `prestressed_beam_power`
+repository**, not a frozen snapshot. The single source of truth is:
+
+- `src/utils/beamCalculations.js` — the power-formula analysis engine
+- `src/data/steelPresets.js` — per-grade Q/R/K parameters
+
+The files under `engine/` are *generated copies* of those two (see
+`engine/SOURCE.txt` for the commit they came from). A skill uploaded to Claude
+runs as a standalone bundle with no access to the rest of the repo, so the
+copy has to travel with it — but it is always regenerated from the canonical
+source, never hand-edited.
+
+**Workflow when the methodology changes:**
+
+1. Edit the canonical source under `src/` (or pull the latest repo).
+2. Re-sync the engine copy:
+
+   ```bash
+   npm run skill:sync          # or: node skills/power-formula/sync-engine.mjs
+   ```
+
+3. Re-run the examples to confirm the regression values still hold.
+4. Download the `skills/power-formula/` folder and re-upload it to Claude.
+
+This way the uploaded skill always reflects the current repo methodology.
