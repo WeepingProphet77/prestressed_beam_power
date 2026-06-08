@@ -1,0 +1,4 @@
+{
+  "section": { "sectionType": "rectangular", "bf": 12, "bw": 12, "hf": 24, "h": 24, "fc": 5, "lambda": 1, "Mu": 150 },
+  "steelLayers": [ { "area": 0.918, "depth": 21, "fse": 170, "grade": "grade270" } ]
+}
