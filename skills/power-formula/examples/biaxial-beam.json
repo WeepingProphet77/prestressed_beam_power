@@ -1,0 +1,9 @@
+{
+  "section": { "sectionType": "rectangular", "bf": 12, "bw": 12, "hf": 24, "h": 24, "fc": 5, "lambda": 1, "bendingMode": "biaxial" },
+  "steelLayers": [
+    { "area": 0.459, "depth": 21, "x": 3, "fse": 170, "grade": "grade270" },
+    { "area": 0.459, "depth": 21, "x": 9, "fse": 170, "grade": "grade270" }
+  ],
+  "mode": "biaxial",
+  "biaxial": { "Mux": 150, "Muy": 20, "MxService": 90, "MyService": 12 }
+}
