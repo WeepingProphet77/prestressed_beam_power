@@ -125,13 +125,46 @@ export default function BeamInputForm({ onCalculate }) {
 
   // Receive geometry from the DXF importer. It arrives already normalized to the
   // engine convention (inches, y down, top fiber at y = 0), so store it as-is.
-  const handleDxfGeometry = ({ points, holes, h }) => {
+  //
+  // Reinforcement "nodes" (DXF POINT entities) trigger biaxial mode and seed one
+  // steel layer per node, positioned to match it. Clearing the import (no
+  // geometry) reverts to uniaxial with a single default layer. A node-less import
+  // leaves the current bending mode and layers untouched.
+  const handleDxfGeometry = ({ points, holes, h, nodes }) => {
+    const hasGeom = points && points.length >= 3;
+    const importedNodes = hasGeom && Array.isArray(nodes) ? nodes : [];
+
     setSection((prev) => ({
       ...prev,
-      points: points && points.length >= 3 ? points : [],
+      points: hasGeom ? points : [],
       holes: holes || [],
-      h: points && points.length >= 3 ? h : prev.h,
+      h: hasGeom ? h : prev.h,
+      bendingMode:
+        importedNodes.length > 0
+          ? 'biaxial'
+          : !hasGeom
+          ? 'uniaxial'
+          : prev.bendingMode,
     }));
+
+    if (importedNodes.length > 0) {
+      // One steel layer per node, located to match it. x is from the left fiber
+      // and depth is from the top fiber (engine convention); the form shows the
+      // equivalent lower-left (x, y) readout. Default steel type/area are applied
+      // so the user can adjust per their design.
+      setLayers(
+        importedNodes.map((n, i) => ({
+          ...DEFAULT_LAYER,
+          id: i + 1,
+          x: String(+n.x.toFixed(4)),
+          depth: String(+n.depth.toFixed(4)),
+        }))
+      );
+      setNextId(importedNodes.length + 1);
+    } else if (!hasGeom) {
+      setLayers([{ ...DEFAULT_LAYER, id: 1 }]);
+      setNextId(2);
+    }
   };
 
   const handleLayerChange = (id, field, value) => {
@@ -280,7 +313,8 @@ export default function BeamInputForm({ onCalculate }) {
         {section.bendingMode === 'biaxial' && (
           <div className="biaxial-note">
             Biaxial mode builds the full φMx–φMy interaction envelope. Specify each
-            layer&apos;s lateral location <em>x</em> (from the left fiber). Sign convention:
+            layer&apos;s lateral location <em>x</em> (from the left fiber); a lower-left
+            (x, y) readout is shown beneath each layer for reference. Sign convention:
             +Mx = tension at bottom, +My = tension at right.
           </div>
         )}
@@ -581,7 +615,8 @@ export default function BeamInputForm({ onCalculate }) {
 
         <div className="layers-info">
           Depth is measured from the extreme compression fiber.
-          For prestressing steel, enter the effective prestress <span style={{whiteSpace: 'nowrap'}}>(f<sub>se</sub>)</span> after all losses.
+          {section.bendingMode === 'biaxial' && ' A lower-left (x, y) readout is shown beneath each layer for reference.'}
+          {' '}For prestressing steel, enter the effective prestress <span style={{whiteSpace: 'nowrap'}}>(f<sub>se</sub>)</span> after all losses.
         </div>
 
         {layers.map((layer, idx) => {
@@ -634,8 +669,8 @@ export default function BeamInputForm({ onCalculate }) {
                   <span className="label-text">A<sub>s</sub> (in&sup2;)</span>
                   <input
                     type="number"
-                    step="0.001"
-                    min="0.001"
+                    step="any"
+                    min="0.0001"
                     value={layer.area}
                     onChange={(e) => handleLayerChange(layer.id, 'area', e.target.value)}
                   />
@@ -646,8 +681,8 @@ export default function BeamInputForm({ onCalculate }) {
                   <span className="label-text">Depth, d (in)</span>
                   <input
                     type="number"
-                    step="0.1"
-                    min="0.1"
+                    step="any"
+                    min="0.0001"
                     value={layer.depth}
                     onChange={(e) => handleLayerChange(layer.id, 'depth', e.target.value)}
                   />
@@ -657,7 +692,7 @@ export default function BeamInputForm({ onCalculate }) {
                     <span className="label-text">Lateral, x (in)</span>
                     <input
                       type="number"
-                      step="0.1"
+                      step="any"
                       value={layer.x}
                       onChange={(e) => handleLayerChange(layer.id, 'x', e.target.value)}
                     />
@@ -676,6 +711,20 @@ export default function BeamInputForm({ onCalculate }) {
                   {isMild && <span className="field-note">N/A for mild steel</span>}
                 </label>
               </div>
+              {section.bendingMode === 'biaxial' && (() => {
+                // Display-only readout: the same location expressed from the
+                // lower-left corner (x from left, y from bottom = h − depth).
+                const hNum = parseFloat(section.h);
+                const xNum = parseFloat(layer.x);
+                const dNum = parseFloat(layer.depth);
+                if (![hNum, xNum, dNum].every(Number.isFinite)) return null;
+                const yFromBottom = hNum - dNum;
+                return (
+                  <div className="field-note layer-llcoord">
+                    From lower-left: x = {xNum.toFixed(4)}&Prime;, y = {yFromBottom.toFixed(4)}&Prime;
+                  </div>
+                );
+              })()}
               <div className="preset-info">
                 <span style={{whiteSpace: 'nowrap'}}>E<sub>s</sub>={preset?.Es?.toLocaleString()} ksi</span>
                 <span style={{whiteSpace: 'nowrap'}}>f<sub>py</sub>={preset?.fpy} ksi</span>

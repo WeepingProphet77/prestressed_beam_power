@@ -6,9 +6,11 @@ import { dxfRingsToSection } from '../utils/dxfGeometry';
  * Upload a .dxf cross-section for the "Custom (DXF Import)" section type.
  *
  * The outermost closed polyline is the solid concrete; closed polylines nested
- * inside it are openings (voids). On a successful import this reports the
- * normalized geometry — { points, holes, h } in inches, y down, top fiber at
- * y = 0 — to the parent via onChange, matching the engine's polygon convention.
+ * inside it are openings (voids). DXF POINT entities are treated as reinforcement
+ * "nodes". On a successful import this reports the normalized geometry —
+ * { points, holes, h, nodes } in inches, y down, top fiber at y = 0 — to the
+ * parent via onChange, matching the engine's polygon convention. When nodes are
+ * present the parent switches to biaxial bending and seeds a steel layer at each.
  *
  * Units: if the DXF carries $INSUNITS it is used and shown; the user can override
  * with the unit selector. Re-importing replaces the previous geometry.
@@ -29,25 +31,29 @@ export default function DxfImporter({ value, onChange }) {
   const fileRef = useRef(null);
   const [fileName, setFileName] = useState(null);
   const [rawRings, setRawRings] = useState(null); // parsed rings (DXF coords)
+  const [rawNodes, setRawNodes] = useState([]);   // parsed POINT entities (DXF coords)
+  const [nodes, setNodes] = useState([]);         // transformed nodes (engine coords) for preview
   const [unit, setUnit] = useState('in');
   const [detectedUnit, setDetectedUnit] = useState(null);
   const [error, setError] = useState(null);
   const [warnings, setWarnings] = useState([]);
   const [stats, setStats] = useState(null);
 
-  // Build geometry from already-parsed rings at the chosen unit, push it up.
-  const applyRings = (rings, chosenUnit) => {
+  // Build geometry from already-parsed rings + nodes at the chosen unit, push it up.
+  const applyRings = (rings, chosenUnit, nodesArg = rawNodes) => {
     try {
       const unitScale = UNIT_SCALE_TO_INCHES[chosenUnit] ?? 1;
-      const geom = dxfRingsToSection(rings, { unitScale });
+      const geom = dxfRingsToSection(rings, { unitScale, nodes: nodesArg });
       setStats(geom.stats);
       setWarnings(geom.warnings || []);
+      setNodes(geom.nodes || []);
       setError(null);
-      onChange({ points: geom.points, holes: geom.holes, h: geom.h });
+      onChange({ points: geom.points, holes: geom.holes, h: geom.h, nodes: geom.nodes });
     } catch (e) {
       setStats(null);
+      setNodes([]);
       setError(e.message);
-      onChange({ points: [], holes: [], h: 0 });
+      onChange({ points: [], holes: [], h: 0, nodes: [] });
     }
   };
 
@@ -57,38 +63,43 @@ export default function DxfImporter({ value, onChange }) {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const { rings, units, warnings: parseWarnings } = parseDxf(String(reader.result));
+        const { rings, nodes: parsedNodes, units, warnings: parseWarnings } = parseDxf(String(reader.result));
         setRawRings(rings);
+        setRawNodes(parsedNodes || []);
         setDetectedUnit(units);
         const chosen = units && UNIT_SCALE_TO_INCHES[units] ? units : unit;
         setUnit(chosen);
-        // Combine parse-time + geometry-time warnings via applyRings.
+        // Combine parse-time + geometry-time warnings.
         const geomWarnings = [];
         try {
           const unitScale = UNIT_SCALE_TO_INCHES[chosen] ?? 1;
-          const geom = dxfRingsToSection(rings, { unitScale });
+          const geom = dxfRingsToSection(rings, { unitScale, nodes: parsedNodes || [] });
           geomWarnings.push(...(geom.warnings || []));
           setStats(geom.stats);
+          setNodes(geom.nodes || []);
           setError(null);
-          onChange({ points: geom.points, holes: geom.holes, h: geom.h });
+          onChange({ points: geom.points, holes: geom.holes, h: geom.h, nodes: geom.nodes });
         } catch (e) {
           setStats(null);
+          setNodes([]);
           setError(e.message);
-          onChange({ points: [], holes: [], h: 0 });
+          onChange({ points: [], holes: [], h: 0, nodes: [] });
         }
         setWarnings([...(parseWarnings || []), ...geomWarnings]);
       } catch (e) {
         setRawRings(null);
+        setRawNodes([]);
+        setNodes([]);
         setStats(null);
         setDetectedUnit(null);
         setWarnings([]);
         setError(e.message);
-        onChange({ points: [], holes: [], h: 0 });
+        onChange({ points: [], holes: [], h: 0, nodes: [] });
       }
     };
     reader.onerror = () => {
       setError('Could not read the file.');
-      onChange({ points: [], holes: [], h: 0 });
+      onChange({ points: [], holes: [], h: 0, nodes: [] });
     };
     reader.readAsText(file);
   };
@@ -101,12 +112,14 @@ export default function DxfImporter({ value, onChange }) {
   const handleClear = () => {
     setFileName(null);
     setRawRings(null);
+    setRawNodes([]);
+    setNodes([]);
     setDetectedUnit(null);
     setError(null);
     setWarnings([]);
     setStats(null);
     if (fileRef.current) fileRef.current.value = '';
-    onChange({ points: [], holes: [], h: 0 });
+    onChange({ points: [], holes: [], h: 0, nodes: [] });
   };
 
   // ── Preview (uses the normalized geometry already on `value`) ──
@@ -141,6 +154,11 @@ export default function DxfImporter({ value, onChange }) {
             <path key={i} d={ringPath(hole)} fill="none" stroke="#b45309" strokeWidth="1.2" strokeDasharray="4,3" />
           ) : null
         )}
+        {/* Reinforcement nodes (DXF POINT entities) → steel-layer locations. */}
+        {nodes.map((n, i) => (
+          <circle key={`n${i}`} cx={sx(n.x)} cy={sy(n.depth)} r={3.2}
+            fill="#dc2626" stroke="#fff" strokeWidth="1" />
+        ))}
       </svg>
     );
   }
@@ -150,6 +168,8 @@ export default function DxfImporter({ value, onChange }) {
       <div className="drawer-hint">
         Upload a <strong>.dxf</strong> with the section drawn as <strong>closed polylines</strong>.
         The outer polyline is solid concrete; closed polylines inside it are treated as openings.
+        Any <strong>POINT</strong> entities (nodes) become steel-layer locations and switch the
+        analysis to biaxial bending.
       </div>
 
       <div className="dxf-upload-row">
@@ -198,7 +218,14 @@ export default function DxfImporter({ value, onChange }) {
           <div className="drawer-readout">
             depth h = {stats.height.toFixed(2)}&quot; &nbsp;|&nbsp; width = {stats.width.toFixed(2)}&quot;
             &nbsp;|&nbsp; net area = {stats.area.toFixed(2)} in&sup2; &nbsp;|&nbsp; openings = {stats.openingCount}
+            &nbsp;|&nbsp; nodes = {stats.nodeCount ?? 0}
           </div>
+          {(stats.nodeCount ?? 0) > 0 && (
+            <div className="drawer-warning">
+              {stats.nodeCount} reinforcement node(s) found — switched to biaxial bending
+              and added a steel layer at each node. Set the steel type and area per layer below.
+            </div>
+          )}
         </>
       )}
 

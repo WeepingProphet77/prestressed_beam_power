@@ -38,6 +38,27 @@ describe('parseDxf — closed LWPOLYLINE', () => {
   });
 });
 
+describe('parseDxf — POINT nodes', () => {
+  it('reads POINT entities as nodes alongside the section ring', () => {
+    const { rings, nodes } = parseDxf(fixture('rect-with-nodes.dxf'));
+    expect(rings).toHaveLength(1);
+    expect(ringArea(rings[0])).toBeCloseTo(12 * 24, 6);
+    expect(nodes).toHaveLength(2);
+    // Raw DXF coordinates (y up), in encounter order.
+    expect(nodes[0]).toMatchObject({ x: 2, y: 2 });
+    expect(nodes[1]).toMatchObject({ x: 6, y: 21 });
+  });
+
+  it('errors when nodes are present but no closed outline exists', () => {
+    const dxf = [
+      '0', 'SECTION', '2', 'ENTITIES',
+      '0', 'POINT', '10', '2', '20', '2',
+      '0', 'ENDSEC', '0', 'EOF',
+    ].join('\n');
+    expect(() => parseDxf(dxf)).toThrow(/no closed section outline/i);
+  });
+});
+
 describe('parseDxf — bulge tessellation', () => {
   it('expands a two-vertex closed polyline with bulge 1 into a full circle', () => {
     const { rings } = parseDxf(fixture('bulge-circle.dxf'));

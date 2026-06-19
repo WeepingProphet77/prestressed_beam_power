@@ -9,12 +9,13 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseDxf } from './dxfParser';
 import { classifyRings, dxfRingsToSection } from './dxfGeometry';
-import { analyzeBeam, grossSectionProperties } from './beamCalculations';
+import { analyzeBeam, analyzeBiaxial, grossSectionProperties } from './beamCalculations';
 import steelPresets from '../data/steelPresets';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => readFileSync(join(here, '__fixtures__', name), 'utf8');
 const GR60 = steelPresets.find((p) => p.id === 'grade60');
+const GR270 = steelPresets.find((p) => p.id === 'grade270');
 
 describe('classifyRings', () => {
   it('marks an outer ring as solid (depth 0) and a nested ring as an opening (depth 1)', () => {
@@ -60,6 +61,52 @@ describe('dxfRingsToSection — normalization', () => {
   it('rejects multiple separate solids', () => {
     const { rings } = parseDxf(fixture('two-solids.dxf'));
     expect(() => dxfRingsToSection(rings, { unitScale: 1 })).toThrow(/separate solid/i);
+  });
+});
+
+describe('dxfRingsToSection — reinforcement nodes', () => {
+  it('transforms POINT nodes to engine coords (x from left, depth from top) and orders them', () => {
+    const { rings, nodes } = parseDxf(fixture('rect-with-nodes.dxf'));
+    const { nodes: out, stats } = dxfRingsToSection(rings, { unitScale: 1, nodes });
+    expect(stats.nodeCount).toBe(2);
+    // Sorted top-to-bottom: (6,21) -> depth 3 comes before (2,2) -> depth 22.
+    expect(out[0]).toMatchObject({ x: 6, depth: 3 });
+    expect(out[1]).toMatchObject({ x: 2, depth: 22 });
+  });
+
+  it('applies the unit scale to nodes', () => {
+    const { rings, nodes } = parseDxf(fixture('rect-with-nodes.dxf'));
+    const { nodes: out } = dxfRingsToSection(rings, { unitScale: 1 / 25.4, nodes });
+    expect(out[0].x).toBeCloseTo(6 / 25.4, 6);
+    expect(out[0].depth).toBeCloseTo(3 / 25.4, 6);
+  });
+
+  it('warns when a node lies outside the concrete', () => {
+    const { rings } = parseDxf(fixture('rect-with-nodes.dxf'));
+    const outside = [{ x: 20, y: 20 }]; // x = 20 is outside the 12-wide rectangle
+    const { nodes: out, stats, warnings } = dxfRingsToSection(rings, { unitScale: 1, nodes: outside });
+    expect(stats.nodeCount).toBe(1);
+    expect(out).toHaveLength(1); // still created so the engineer can reposition
+    expect(warnings.some((w) => /outside the concrete/i.test(w))).toBe(true);
+  });
+
+  it('returns no nodes when none are supplied', () => {
+    const { rings } = parseDxf(fixture('rect.dxf'));
+    const { nodes: out, stats } = dxfRingsToSection(rings, { unitScale: 1 });
+    expect(out).toEqual([]);
+    expect(stats.nodeCount).toBe(0);
+  });
+
+  it('node-derived layers feed the (unchanged) biaxial engine end to end', () => {
+    const { rings, nodes } = parseDxf(fixture('rect-with-nodes.dxf'));
+    const { points, holes, h, nodes: out } = dxfRingsToSection(rings, { unitScale: 1, nodes });
+    const section = { sectionType: 'dxf', points, holes, h, fc: 5, bendingMode: 'biaxial', lambda: 1 };
+    const layers = out.map((n) => ({ area: 0.153, depth: n.depth, x: n.x, fse: 170, steel: GR270, name: GR270.name }));
+
+    const res = analyzeBiaxial(section, layers, { Mux: 0, Muy: 0 });
+    expect(res.mode).toBe('biaxial');
+    expect(res.envelope.length).toBeGreaterThan(0);
+    expect(Number.isFinite(res.anchors.xSag.phiMx)).toBe(true);
   });
 });
 
