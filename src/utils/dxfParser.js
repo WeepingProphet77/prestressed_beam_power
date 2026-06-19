@@ -117,7 +117,8 @@ function tokenize(text) {
 /**
  * Parse ASCII DXF text.
  * @param {string} text
- * @returns {{ rings: Array<Array<{x:number,y:number}>>, units: string|null, warnings: string[] }}
+ * @returns {{ rings: Array<Array<{x:number,y:number}>>, nodes: Array<{x:number,y:number}>, units: string|null, warnings: string[] }}
+ *   nodes are DXF POINT entities (reinforcement locations), in raw DXF coords.
  */
 export function parseDxf(text) {
   if (typeof text !== 'string' || text.indexOf('\0') !== -1) {
@@ -127,6 +128,7 @@ export function parseDxf(text) {
   if (!tokens.length) throw new Error('The DXF file is empty or unreadable.');
 
   const rings = [];
+  const nodes = []; // DXF POINT entities → candidate steel-layer locations
   const warnings = [];
   let units = null;
 
@@ -174,6 +176,10 @@ export function parseDxf(text) {
       const res = readCircle(tokens, i + 1, end);
       i = res.next;
       if (res.circle) rings.push(circleToRing(res.circle));
+    } else if (type === 'POINT') {
+      const res = readPoint(tokens, i + 1, end);
+      i = res.next;
+      if (res.point) nodes.push(res.point);
     } else if (type === 'ELLIPSE' || type === 'SPLINE') {
       warnings.push(`A ${type} entity was found and skipped — only closed polylines and circles are supported.`);
       i++;
@@ -183,10 +189,16 @@ export function parseDxf(text) {
   }
 
   if (!rings.length) {
+    if (nodes.length) {
+      throw new Error(
+        `Found ${nodes.length} node(s) but no closed section outline. Draw the ` +
+        `concrete cross-section with a closed polyline so the nodes can be placed inside it.`
+      );
+    }
     throw new Error('No closed polylines (or circles) were found in the DXF. Draw the section with closed polylines.');
   }
 
-  return { rings, units, warnings };
+  return { rings, nodes, units, warnings };
 }
 
 /** Reads an LWPOLYLINE body starting after its "0/LWPOLYLINE" token. */
@@ -262,6 +274,20 @@ function readCircle(tokens, from, end) {
     else if (code === 40) c.r = Number(value);
   }
   return { circle: c.r > 0 ? c : null, next: i };
+}
+
+/** Reads a POINT body (group code 10 = x, 20 = y). */
+function readPoint(tokens, from, end) {
+  const p = { x: null, y: null };
+  let i = from;
+  for (; i < end; i++) {
+    const { code, value } = tokens[i];
+    if (code === 0) break;
+    if (code === 10) p.x = Number(value);
+    else if (code === 20) p.y = Number(value);
+  }
+  const ok = Number.isFinite(p.x) && Number.isFinite(p.y);
+  return { point: ok ? { x: p.x, y: p.y } : null, next: i };
 }
 
 /** Expand vertices+bulges into a clean closed ring, or null if not usable. */

@@ -81,14 +81,16 @@ export function classifyRings(rings) {
  * @param {Array<Array<{x,y}>>} rings   closed rings in raw DXF coordinates
  * @param {object} opts
  * @param {number} [opts.unitScale]     inches per DXF unit (defaults to 1)
- * @returns {{ points, holes, h, stats, warnings }}
+ * @param {Array<{x,y}>} [opts.nodes]   DXF POINT entities in raw DXF coordinates
+ * @returns {{ points, holes, h, nodes, stats, warnings }}
  *   points  outer solid ring  [{x,y}]            (inches, y down, top = 0)
  *   holes   opening rings      [[{x,y}], ...]
  *   h       total depth (in)
- *   stats   { width, height, area, openingCount }
+ *   nodes   reinforcement locations [{x, depth}]  (inches; x from left, depth from top)
+ *   stats   { width, height, area, openingCount, nodeCount }
  *   warnings string[]
  */
-export function dxfRingsToSection(rings, { unitScale = 1 } = {}) {
+export function dxfRingsToSection(rings, { unitScale = 1, nodes = [] } = {}) {
   if (!rings || !rings.length) {
     throw new Error('No closed geometry was found in the DXF.');
   }
@@ -145,11 +147,34 @@ export function dxfRingsToSection(rings, { unitScale = 1 } = {}) {
   let width = 0;
   for (const p of points) if (p.x > width) width = p.x;
 
+  // Transform reinforcement nodes into the engine convention (x from left,
+  // depth from top), flag any that fall outside the concrete (or inside a void),
+  // and order them top-to-bottom then left-to-right for a stable layer list.
+  const transformedNodes = nodes.map((p) => {
+    const t = tx(p);
+    return { x: t.x, depth: t.y };
+  });
+  let outsideCount = 0;
+  for (const n of transformedNodes) {
+    const pt = { x: n.x, y: n.depth };
+    const inSolid = pointInRing(pt, points);
+    const inVoid = holes.some((hole) => hole.length >= 3 && pointInRing(pt, hole));
+    if (!inSolid || inVoid) outsideCount++;
+  }
+  transformedNodes.sort((a, b) => a.depth - b.depth || a.x - b.x);
+  if (outsideCount) {
+    warnings.push(
+      `${outsideCount} node(s) lie outside the concrete (or inside a void). Their ` +
+      `steel layers were still created — reposition them or adjust the section.`
+    );
+  }
+
   return {
     points,
     holes,
     h,
-    stats: { width, height: h, area: A, openingCount: holes.length },
+    nodes: transformedNodes,
+    stats: { width, height: h, area: A, openingCount: holes.length, nodeCount: transformedNodes.length },
     warnings,
   };
 }
