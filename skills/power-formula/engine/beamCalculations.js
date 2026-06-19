@@ -17,6 +17,16 @@ export function beta1(fc) {
 }
 
 /**
+ * True for section types defined by an outer polygon ring + optional hole rings
+ * (the interactively drawn "custom" section and the DXF-imported "dxf" section).
+ * Both share the same { points, holes } geometry and analysis path; only the
+ * input method and display label differ.
+ */
+export function isPolygonSection(section) {
+  return section?.sectionType === 'custom' || section?.sectionType === 'dxf';
+}
+
+/**
  * Concrete modulus of elasticity for normalweight concrete per ACI 318-19
  * §19.2.2.1(b):  Ec = 57000·√f'c  (psi).  Returns ksi.
  * (Lightweight concrete has a lower Ec that depends on unit weight wc; that
@@ -182,8 +192,8 @@ export function decompressionStrains(steelLayers, sectionProps, fc) {
  * For a rectangular beam, bf = bw and hf = h, so it reduces to Cc = 0.85·f'c·a·b.
  */
 export function concreteCompression(fc, a, bf, bw, hf, section = null) {
-  // Handle custom drawn polygon section (with optional holes)
-  if (section && section.sectionType === 'custom') {
+  // Handle polygon sections (drawn "custom" or DXF-imported), with optional holes
+  if (isPolygonSection(section)) {
     return 0.85 * fc * polygonAreaAboveDepth(section, a);
   }
 
@@ -265,8 +275,8 @@ export function concreteCompression(fc, a, bf, bw, hf, section = null) {
  *   Approximated as gross section centroid minus void contribution
  */
 export function compressionCentroid(a, bf, bw, hf, section = null) {
-  // Handle custom drawn polygon section (with optional holes)
-  if (section && section.sectionType === 'custom') {
+  // Handle polygon sections (drawn "custom" or DXF-imported), with optional holes
+  if (isPolygonSection(section)) {
     return polygonCentroidAboveDepth(section, a);
   }
 
@@ -727,7 +737,8 @@ export function grossSectionProperties(section) {
       break;
     }
 
-    case 'custom': {
+    case 'custom':
+    case 'dxf': {
       const props = polygonProperties(section);
       A = props.A;
       yCg = props.yCg;
@@ -873,6 +884,7 @@ export function sectionToPolygon(section) {
 
   switch (sectionType) {
     case 'custom':
+    case 'dxf':
       return { outer: section.points, holes: section.holes || [] };
 
     case 'rectangular': {

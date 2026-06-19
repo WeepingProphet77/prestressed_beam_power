@@ -403,6 +403,71 @@
   color: #b45309;
 }
 
+/* ── DXF importer ── */
+.dxf-importer {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.dxf-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0;
+}
+
+.dxf-upload-row input[type='file'] {
+  font-size: 0.76rem;
+  max-width: 100%;
+}
+
+.dxf-clear {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.74rem;
+  border: 1.5px solid #fecaca;
+  border-radius: var(--radius-sm, 6px);
+  background: #fef2f2;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.dxf-units-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0;
+}
+
+.dxf-units-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dxf-units-note {
+  font-size: 0.72rem;
+  color: var(--slate-500, #64748b);
+}
+
+.dxf-error {
+  margin: 0.4rem 0;
+  font-size: 0.76rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.5rem 0.6rem;
+  line-height: 1.5;
+}
+
+.dxf-preview {
+  border: 1.5px solid var(--blue-200, #bfdbfe);
+  border-radius: var(--radius-sm, 6px);
+  background: #fff;
+  margin: 0.4rem 0;
+}
+
 /* ── Biaxial mode ── */
 .biaxial-note {
   font-size: 0.74rem;

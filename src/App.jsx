@@ -29,13 +29,21 @@ export default function App() {
       if (!layers.length) {
         throw new Error('Add at least one steel reinforcement layer.');
       }
-      if (sec.sectionType === 'custom') {
+      if (sec.sectionType === 'custom' || sec.sectionType === 'dxf') {
         if (!sec.points || sec.points.length < 3) {
-          throw new Error('Draw and close the outer shape (at least 3 nodes) before calculating.');
+          throw new Error(
+            sec.sectionType === 'dxf'
+              ? 'Import a DXF with a closed outer polyline before calculating.'
+              : 'Draw and close the outer shape (at least 3 nodes) before calculating.'
+          );
         }
         const { A } = polygonProperties(sec);
         if (!(A > 0)) {
-          throw new Error('The drawn section has zero or invalid area. Check that the outline does not self-intersect and holes lie inside it.');
+          throw new Error(
+            sec.sectionType === 'dxf'
+              ? 'The imported section has zero or invalid area. Check that the outline does not self-intersect and openings lie inside it.'
+              : 'The drawn section has zero or invalid area. Check that the outline does not self-intersect and holes lie inside it.'
+          );
         }
       }
       for (let i = 0; i < layers.length; i++) {
