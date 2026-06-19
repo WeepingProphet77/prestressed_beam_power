@@ -236,6 +236,7 @@ export default async function generatePdfReport(results, section, info) {
     doubletee: 'Double Tee (PCI)',
     hollowcore: 'Hollow Core (PCI)',
     custom: 'Custom (Drawn)',
+    dxf: 'Custom (DXF Import)',
   };
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');

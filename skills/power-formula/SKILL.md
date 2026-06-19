@@ -72,7 +72,7 @@ through the scripts below.
 ```jsonc
 {
   "section": {
-    "sectionType": "rectangular | tbeam | sandwich | doubletee | hollowcore | custom",
+    "sectionType": "rectangular | tbeam | sandwich | doubletee | hollowcore | custom | dxf",
     "fc": 5,            // f'c, ksi (REQUIRED)
     "lambda": 1,        // lightweight factor (optional, default 1)
     "Mu": 0,            // factored demand, kip-ft (optional; enables 1.33Mu relief)
@@ -83,7 +83,8 @@ through the scripts below.
     //   sandwich:    bt, ht, hg, bb, h
     //   doubletee:   bf, hf, numStems, stemWidth, h
     //   hollowcore:  bf, h, numVoids, voidDiameter, voidCenterDepth
-    //   custom:      points:[{x,y}], holes:[[{x,y}]], h   (y down, 0 = top fiber)
+    //   custom/dxf:  points:[{x,y}], holes:[[{x,y}]], h   (y down, 0 = top fiber)
+    //                ("dxf" is the DXF-imported variant of the same polygon geometry)
   },
   "steelLayers": [
     {

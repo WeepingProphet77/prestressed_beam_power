@@ -12,7 +12,7 @@
  * {
  *   "section": {
  *     "sectionType": "rectangular" | "tbeam" | "sandwich" | "doubletee" |
- *                    "hollowcore" | "custom",
+ *                    "hollowcore" | "custom" | "dxf",
  *     "fc": 5,                // f'c, ksi
  *     "lambda": 1,            // lightweight factor (optional, default 1)
  *     "Mu": 0,                // factored demand, kip-ft (optional; enables 1.33Mu relief)

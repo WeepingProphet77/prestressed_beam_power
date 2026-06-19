@@ -16,7 +16,7 @@ export default function BeamDiagram({ section, results }) {
   const isSandwich = sectionType === 'sandwich';
   const isDoubleTee = sectionType === 'doubletee';
   const isHollowCore = sectionType === 'hollowcore';
-  const isCustom = sectionType === 'custom';
+  const isCustom = sectionType === 'custom' || sectionType === 'dxf';
   const customMaxX = isCustom && points?.length
     ? Math.max(...points.map((p) => p.x))
     : 1;

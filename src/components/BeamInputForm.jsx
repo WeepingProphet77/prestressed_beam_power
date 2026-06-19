@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import steelPresets from '../data/steelPresets';
 import SectionDrawer from './SectionDrawer';
+import DxfImporter from './DxfImporter';
 
 const DEFAULT_SECTION = {
   sectionType: 'rectangular',
@@ -122,6 +123,17 @@ export default function BeamInputForm({ onCalculate }) {
     }));
   };
 
+  // Receive geometry from the DXF importer. It arrives already normalized to the
+  // engine convention (inches, y down, top fiber at y = 0), so store it as-is.
+  const handleDxfGeometry = ({ points, holes, h }) => {
+    setSection((prev) => ({
+      ...prev,
+      points: points && points.length >= 3 ? points : [],
+      holes: holes || [],
+      h: points && points.length >= 3 ? h : prev.h,
+    }));
+  };
+
   const handleLayerChange = (id, field, value) => {
     setLayers((prev) =>
       prev.map((l) => {
@@ -150,14 +162,17 @@ export default function BeamInputForm({ onCalculate }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Custom drawn section: pass the polygon geometry straight through.
-    if (section.sectionType === 'custom') {
+    // Polygon sections (drawn "custom" or DXF-imported): pass geometry straight through.
+    if (section.sectionType === 'custom' || section.sectionType === 'dxf') {
       if (!section.points || section.points.length < 3) {
-        onCalculate(null, [], 'Draw and close the outer shape (at least 3 nodes) before calculating.');
+        const msg = section.sectionType === 'dxf'
+          ? 'Import a DXF with a closed outer polyline before calculating.'
+          : 'Draw and close the outer shape (at least 3 nodes) before calculating.';
+        onCalculate(null, [], msg);
         return;
       }
       const finalSection = {
-        sectionType: 'custom',
+        sectionType: section.sectionType,
         points: section.points,
         holes: section.holes || [],
         h: parseFloat(section.h),
@@ -244,6 +259,7 @@ export default function BeamInputForm({ onCalculate }) {
               <option value="doubletee">Double Tee (PCI)</option>
               <option value="hollowcore">Hollow Core (PCI)</option>
               <option value="custom">Custom (Draw)</option>
+              <option value="dxf">Custom (DXF Import)</option>
             </select>
           </label>
         </div>
@@ -272,6 +288,20 @@ export default function BeamInputForm({ onCalculate }) {
         {section.sectionType === 'custom' && (
           <>
             <SectionDrawer value={section} onChange={handleCustomGeometry} />
+            <div className="form-row">
+              <label className="computed">
+                <span className="label-text">Total Depth, h (in)</span>
+                <span className="computed-value">
+                  {section.points?.length >= 3 ? section.h.toFixed(2) : '—'}
+                </span>
+              </label>
+            </div>
+          </>
+        )}
+
+        {section.sectionType === 'dxf' && (
+          <>
+            <DxfImporter value={section} onChange={handleDxfGeometry} />
             <div className="form-row">
               <label className="computed">
                 <span className="label-text">Total Depth, h (in)</span>
@@ -320,7 +350,7 @@ export default function BeamInputForm({ onCalculate }) {
               />
             </label>
           )}
-          {section.sectionType !== 'sandwich' && section.sectionType !== 'doubletee' && section.sectionType !== 'hollowcore' && section.sectionType !== 'custom' && (
+          {section.sectionType !== 'sandwich' && section.sectionType !== 'doubletee' && section.sectionType !== 'hollowcore' && section.sectionType !== 'custom' && section.sectionType !== 'dxf' && (
             <label>
               <span className="label-text">{section.sectionType === 'tbeam' ? 'Web' : 'Beam'} Width, b<sub>w</sub> (in)</span>
               <input
@@ -394,7 +424,7 @@ export default function BeamInputForm({ onCalculate }) {
               </label>
             </>
           )}
-          {section.sectionType !== 'sandwich' && section.sectionType !== 'hollowcore' && section.sectionType !== 'custom' && (
+          {section.sectionType !== 'sandwich' && section.sectionType !== 'hollowcore' && section.sectionType !== 'custom' && section.sectionType !== 'dxf' && (
             <label>
               <span className="label-text">Total Depth, h (in)</span>
               <input
