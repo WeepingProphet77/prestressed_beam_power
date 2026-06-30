@@ -1,7 +1,7 @@
 engine/beamCalculations.js and engine/steelPresets.js are GENERATED copies.
 Canonical source: src/utils/beamCalculations.js, src/data/steelPresets.js
-Synced from commit: fe540a326f2a6a3f31e14564578e095774e2bd3e
-Synced at: 2026-06-19T21:10:19.785Z
+Synced from commit: 7f17b6c646f91da770d9162ee5dfbb09f10aecf7
+Synced at: 2026-06-30T20:26:53.284Z
 
 Do not edit these copies directly. Edit the canonical source, then run:
   node skills/power-formula/sync-engine.mjs   (or: npm run skill:sync)
