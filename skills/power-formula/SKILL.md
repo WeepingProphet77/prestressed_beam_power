@@ -56,6 +56,12 @@ through the scripts below.
    It prints `{ mode, result, resolvedSteel }`. Check `result.converged` — if
    `false`, report it and show `result.residual` rather than trusting the
    numbers (usually the steel cannot be balanced within the section).
+
+   The engine is a black box: drive it through this script and read its JSON,
+   and do **not** open `engine/beamCalculations.js` to learn the math or the
+   result shape. Every field you need is documented under "Engine output" below
+   (and, for biaxial, in `references/output-schema.md`), so reading the engine
+   source only burns context for no benefit.
 3. **Generate diagrams** (optional, requested by the user):
 
    ```bash
@@ -122,6 +128,60 @@ node engine/analyze.mjs < examples/rc-beam.json
 node engine/diagrams.mjs out/ < examples/prestressed-beam.json
 ```
 
+## Engine output
+
+`analyze.mjs` prints `{ mode, result, resolvedSteel }`. The fields below are the
+complete contract — read them here, not from the engine source.
+
+`resolvedSteel` (top level, one entry per layer) echoes the grade parameters so
+the report can cite them: `{ grade, name, Es, fpy, fpu, stressCap, Q, R, K }`.
+
+For a **uniaxial** run, `result` is:
+
+```jsonc
+{
+  "c": 5.19, "a": 4.41, "beta1": 0.85,   // neutral axis, stress block, β₁
+  "Cc": 180.0, "ccCentroid": 2.21,        // concrete compression force (kip) + its depth (in)
+  "layerResults": [                       // one entry per steel layer
+    {
+      "area": 3, "depth": 21.5, "x": 0, "fse": 0,
+      "steel": { "id", "name", "category", "Es", "fpu", "fpy", "stressCap", "Q", "R", "K", ... },
+      "strain": 0.00943,                  // total steel strain at this layer
+      "epsDecomp": 0,                     // decompression strain (bonded PT only)
+      "stress": 60,                       // power-formula steel stress, ksi
+      "force": 180                        // layer force, kip
+    }
+  ],
+  "Mn": 3472.9, "MnFt": 289.4,            // nominal moment, kip-in / kip-ft
+  "phi": 0.9,                             // strength-reduction factor (§21.2)
+  "phiMn": 3125.6, "phiMnFt": 260.5,     // design moment, kip-in / kip-ft
+  "epsilonT": 0.00943, "cOverD": 0.241,  // net tensile strain, c/d
+  "ductile": true, "transition": false,  // §21.2 classification flags
+  "fc": 4,
+  "section": { /* echo of the input section */ },
+  "converged": true, "residual": 7.2e-8, // ALWAYS confirm converged === true
+
+  "demand": null,                         // null if no Mu; else { MuFt, utilization, pass }
+
+  "cracking": {                           // §9.6.1.3 cracking + minimum strength
+    "P": 0, "fpc": 0, "e": 0, "yps": 12,  // prestress force/eccentricity, ksi/in
+    "fr": 0.474, "lambda": 1,             // modulus of rupture 7.5·λ·√f'c
+    "Mcr": 546.4, "McrFt": 45.5,          // cracking moment, kip-in / kip-ft
+    "Mcr12": 655.7, "Mcr12Ft": 54.6,      // 1.2·Mcr
+    "Mu133": 0, "Mu133Ft": 0, "Mu": 0,    // 1.33·Mu relief (if Mu given)
+    "threshold": 655.7, "thresholdFt": 54.6,
+    "governs": "1.2Mcr",                  // which controls min strength
+    "passesMinStrength": true,
+    "sectionProps": { "A", "yCg", "Ig", "yb", "Sb" }
+  }
+}
+```
+
+For a **biaxial** run the shape is different (`props`, `envelope`, `anchors`,
+vector `demand`, and a biaxial `cracking` object). It is verbose and only needed
+on biaxial jobs, so its field reference lives in
+`references/output-schema.md` — read that file when `mode === "biaxial"`.
+
 ## Report template (uniaxial)
 
 ```
@@ -155,8 +215,8 @@ Convergence: <converged> (residual <residual>)
 ```
 
 For biaxial, report the `anchors` (φMnx sag/hog, φMny ±), the demand
-`utilization` from `result.demand`, and the cracking envelope from
-`result.cracking`.
+`utilization` from `result.demand`, and the cracking result from
+`result.cracking`. The exact field shapes are in `references/output-schema.md`.
 
 ## Limitations & cautions
 
@@ -170,30 +230,9 @@ For biaxial, report the `anchors` (φMnx sag/hog, φMny ±), the demand
 - This skill covers **flexure only** — not shear, deflection, transfer/release
   stresses, or anchorage. Say so if asked.
 
-## Revising the skill — staying linked to the repo
+## Revising the skill
 
-This skill is **linked to the methodology in the `prestressed_beam_power`
-repository**, not a frozen snapshot. The single source of truth is:
-
-- `src/utils/beamCalculations.js` — the power-formula analysis engine
-- `src/data/steelPresets.js` — per-grade Q/R/K parameters
-
-The files under `engine/` are *generated copies* of those two (see
-`engine/SOURCE.txt` for the commit they came from). A skill uploaded to Claude
-runs as a standalone bundle with no access to the rest of the repo, so the
-copy has to travel with it — but it is always regenerated from the canonical
-source, never hand-edited.
-
-**Workflow when the methodology changes:**
-
-1. Edit the canonical source under `src/` (or pull the latest repo).
-2. Re-sync the engine copy:
-
-   ```bash
-   npm run skill:sync          # or: node skills/power-formula/sync-engine.mjs
-   ```
-
-3. Re-run the examples to confirm the regression values still hold.
-4. Download the `skills/power-formula/` folder and re-upload it to Claude.
-
-This way the uploaded skill always reflects the current repo methodology.
+This skill stays linked to its source repo (`prestressed_beam_power`) rather
+than being a frozen snapshot, so the `engine/` copy is regenerated, never
+hand-edited. The full re-sync workflow is in `references/maintenance.md` —
+read it only when maintaining the skill, not when running an analysis.
