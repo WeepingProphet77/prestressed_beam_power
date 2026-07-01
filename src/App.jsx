@@ -108,13 +108,25 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <div className="header-badge">ACI 318-19</div>
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                <path d="M7 4 L32 4 L32 25 L7 25 A3 3 0 0 1 4 22 L4 7 A3 3 0 0 1 7 4 Z" fill="#1F4E79" />
+                <path d="M32 4 L57 4 A3 3 0 0 1 60 7 L60 22 A3 3 0 0 1 57 25 L32 25 Z" fill="#D7DADD" />
+                <rect x="4" y="30" width="25.5" height="30" rx="3" fill="#2E3A44" />
+                <rect x="34.5" y="30" width="25.5" height="30" rx="3" fill="#A7ACB3" />
+              </svg>
+            </span>
+            <span className="brand-wordmark">Tessera</span>
+          </div>
+          <div className="header-divider" aria-hidden="true"></div>
           <div className="header-text">
             <h1>Prestressed Concrete Beam Calculator</h1>
             <p className="subtitle">
               Flexural strength analysis using the Devalapura&#8211;Tadros / PCI power formula
             </p>
           </div>
+          <div className="header-badge">ACI 318-19</div>
           {results && results.mode !== 'biaxial' && (
             <button
               type="button"
@@ -181,6 +193,10 @@ export default function App() {
 
       <footer className="app-footer">
         <div className="footer-content">
+          <p className="footer-brand">
+            <strong className="footer-brand-name">Tessera</strong>
+            <span className="footer-brand-tag">Structural Engineering Software</span>
+          </p>
           <p>
             Based on <strong>ACI 318-19</strong> and the <strong>Devalapura&#8211;Tadros power formula</strong> for
             steel stress&#8211;strain behavior (PCI Design Handbook).

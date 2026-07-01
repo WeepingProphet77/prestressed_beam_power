@@ -1,0 +1,14 @@
+{
+  "name": "Tessera — Prestressed Concrete Beam Calculator",
+  "short_name": "Tessera",
+  "description": "Flexural strength analysis of prestressed concrete beams using the Devalapura–Tadros / PCI power formula (ACI 318-19).",
+  "icons": [
+    { "src": "favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ],
+  "theme_color": "#1F4E79",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "./"
+}
