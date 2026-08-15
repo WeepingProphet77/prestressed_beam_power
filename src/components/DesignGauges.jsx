@@ -3,6 +3,8 @@
  * Each gauge shows colored zones, threshold markers with labels, and a needle
  * indicating the current value.
  */
+import theme from '../theme';
+
 // Straight-line phi: ϕ (U+03D5)
 const PHI = '\u03D5';
 
@@ -19,7 +21,7 @@ function BarGauge({ title, value, displayValue, zones, markers }) {
   const needlePos = toPercent(value);
 
   // Determine needle color from zones
-  let needleColor = '#1e293b';
+  let needleColor = theme.cyan;
   for (const z of zones) {
     if (value >= z.start && value <= z.end) {
       needleColor = z.color;
@@ -197,9 +199,9 @@ export default function DesignGauges({ results }) {
           value={epsilonT}
           displayValue={`&epsilon;<sub>t</sub> = ${epsilonT.toFixed(5)}`}
           zones={[
-            { start: 0, end: epsilonTy, color: '#ef4444', label: 'Compression' },
-            { start: epsilonTy, end: tensionLimit, color: '#f59e0b', label: 'Transition' },
-            { start: tensionLimit, end: strainMax, color: '#22c55e', label: 'Tension' },
+            { start: 0, end: epsilonTy, color: theme.bad, label: 'Compression' },
+            { start: epsilonTy, end: tensionLimit, color: theme.amber, label: 'Transition' },
+            { start: tensionLimit, end: strainMax, color: theme.ok, label: 'Tension' },
           ]}
           markers={[
             { value: 0, label: '0' },
@@ -215,9 +217,9 @@ export default function DesignGauges({ results }) {
           value={cOverD}
           displayValue={`c/d<sub>t</sub> = ${cOverD.toFixed(4)}`}
           zones={[
-            { start: 0, end: 0.375, color: '#22c55e', label: 'Tension-Ctrl' },
-            { start: 0.375, end: 0.6, color: '#f59e0b', label: 'Transition' },
-            { start: 0.6, end: Math.max(0.8, cOverD * 1.15), color: '#ef4444', label: 'Compression' },
+            { start: 0, end: 0.375, color: theme.ok, label: 'Tension-Ctrl' },
+            { start: 0.375, end: 0.6, color: theme.amber, label: 'Transition' },
+            { start: 0.6, end: Math.max(0.8, cOverD * 1.15), color: theme.bad, label: 'Compression' },
           ]}
           markers={[
             { value: 0, label: '0' },
@@ -233,9 +235,9 @@ export default function DesignGauges({ results }) {
           value={extremeLayer.stress}
           displayValue={`f<sub>ps</sub> = ${extremeLayer.stress.toFixed(1)} ksi (${((extremeLayer.stress / stressCap) * 100).toFixed(0)}%)`}
           zones={[
-            { start: 0, end: fpy, color: '#3b82f6', label: 'Elastic' },
-            { start: fpy, end: stressCap, color: '#22c55e', label: 'Inelastic' },
-            { start: stressCap, end: stressCap * 1.05, color: '#ef4444', label: 'Cap' },
+            { start: 0, end: fpy, color: theme.cyan, label: 'Elastic' },
+            { start: fpy, end: stressCap, color: theme.ok, label: 'Inelastic' },
+            { start: stressCap, end: stressCap * 1.05, color: theme.bad, label: 'Cap' },
           ]}
           markers={[
             { value: 0, label: '0' },

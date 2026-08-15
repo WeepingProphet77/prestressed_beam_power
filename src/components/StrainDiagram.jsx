@@ -1,3 +1,5 @@
+import theme from '../theme';
+
 /**
  * Strain and stress distribution diagram across the beam depth.
  */
@@ -50,8 +52,8 @@ export default function StrainDiagram({ results }) {
           y={margin.top}
           width={beamW}
           height={plotH}
-          fill="#f1f5f9"
-          stroke="#334155"
+          fill={theme.concreteFill}
+          stroke={theme.concreteStroke}
           strokeWidth="1.5"
         />
 
@@ -61,8 +63,8 @@ export default function StrainDiagram({ results }) {
           y={margin.top}
           width={beamW}
           height={(a / h) * plotH}
-          fill="#dbeafe"
-          stroke="#3b82f6"
+          fill={theme.stressBlockFill}
+          stroke={theme.stressBlockStroke}
           strokeWidth="1"
         />
 
@@ -72,7 +74,7 @@ export default function StrainDiagram({ results }) {
           y1={yScale(c)}
           x2={margin.left + beamW}
           y2={yScale(c)}
-          stroke="#ef4444"
+          stroke={theme.neutralAxis}
           strokeWidth="1.5"
           strokeDasharray="4,2"
         />
@@ -84,8 +86,8 @@ export default function StrainDiagram({ results }) {
             cx={margin.left + beamW / 2}
             cy={yScale(lr.depth)}
             r="3"
-            fill={lr.strain > 0 ? '#22c55e' : '#f59e0b'}
-            stroke="#1e293b"
+            fill={lr.strain > 0 ? theme.tensionSteel : theme.compressionSteel}
+            stroke={theme.dotStroke}
             strokeWidth="0.8"
           />
         ))}
@@ -101,7 +103,7 @@ export default function StrainDiagram({ results }) {
           y1={margin.top}
           x2={zeroX}
           y2={margin.top + plotH}
-          stroke="#94a3b8"
+          stroke={theme.axis}
           strokeWidth="0.8"
           strokeDasharray="3,2"
         />
@@ -113,9 +115,9 @@ export default function StrainDiagram({ results }) {
             ${zeroX},${yScale(c)}
             ${zeroX + botStrain * strainScale},${margin.top + plotH}
           `}
-          fill="rgba(239,68,68,0.1)"
-          stroke="#ef4444"
-          strokeWidth="1.5"
+          fill="rgba(255,179,71,0.16)"
+          stroke={theme.stressBlockStroke}
+          strokeWidth="1.3"
         />
 
         {/* Strain value labels */}
@@ -137,8 +139,8 @@ export default function StrainDiagram({ results }) {
           const x = zeroX + lr.strain * strainScale;
           return (
             <g key={i}>
-              <circle cx={x} cy={y} r="3" fill="#ef4444" stroke="#fff" strokeWidth="1" />
-              <line x1={zeroX} y1={y} x2={x} y2={y} stroke="#ef4444" strokeWidth="0.8" strokeDasharray="2,2" />
+              <circle cx={x} cy={y} r="3" fill={theme.ok} stroke={theme.dotStroke} strokeWidth="1" />
+              <line x1={zeroX} y1={y} x2={x} y2={y} stroke={theme.ok} strokeWidth="0.8" strokeDasharray="2,2" />
             </g>
           );
         })}
@@ -154,9 +156,9 @@ export default function StrainDiagram({ results }) {
           y={margin.top}
           width={stressW * 0.7}
           height={(a / h) * plotH}
-          fill="rgba(59,130,246,0.15)"
-          stroke="#3b82f6"
-          strokeWidth="1.5"
+          fill={theme.stressBlockFill}
+          stroke={theme.stressBlockStroke}
+          strokeWidth="1.3"
         />
         <text
           x={stressLeft + stressW * 0.7 + 4}
@@ -173,8 +175,8 @@ export default function StrainDiagram({ results }) {
             y1={yScale(ccCentroid)}
             x2={stressLeft + stressW * 0.35}
             y2={yScale(ccCentroid)}
-            stroke="#3b82f6"
-            strokeWidth="2"
+            stroke={theme.amber}
+            strokeWidth="1.8"
             markerEnd="url(#arrowBlue)"
           />
           <text
@@ -197,7 +199,7 @@ export default function StrainDiagram({ results }) {
                 y1={y}
                 x2={stressLeft + (isTension ? stressW * 0.85 : stressW * 0.35)}
                 y2={y}
-                stroke={isTension ? '#22c55e' : '#f59e0b'}
+                stroke={isTension ? theme.tensionSteel : theme.compressionSteel}
                 strokeWidth="2"
                 markerEnd={isTension ? 'url(#arrowGreen)' : 'url(#arrowAmber)'}
               />
@@ -215,13 +217,13 @@ export default function StrainDiagram({ results }) {
         {/* Arrow markers */}
         <defs>
           <marker id="arrowBlue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6" fill="#3b82f6" />
+            <path d="M0,0 L6,3 L0,6" fill={theme.amber} />
           </marker>
           <marker id="arrowGreen" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6" fill="#22c55e" />
+            <path d="M0,0 L6,3 L0,6" fill={theme.tensionSteel} />
           </marker>
           <marker id="arrowAmber" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6" fill="#f59e0b" />
+            <path d="M0,0 L6,3 L0,6" fill={theme.compressionSteel} />
           </marker>
         </defs>
       </svg>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import theme from '../theme';
 
 /**
  * Interactive cross-section drawer for the "custom" section type.
@@ -24,7 +25,7 @@ const PX = 9;             // pixels per inch
 const PAD = 24;           // svg padding (px)
 const SNAP = 1.0;         // snap-to-first-node radius (in)
 
-const RING_COLORS = ['#1e293b', '#b45309', '#0e7490', '#7c3aed'];
+const RING_COLORS = [theme.cyan, theme.amber, theme.ok, theme.violet];
 
 export default function SectionDrawer({ value, onChange }) {
   // rings: [{ points: [{x,y}], closed: bool }]
@@ -164,9 +165,9 @@ export default function SectionDrawer({ value, onChange }) {
   for (let i = 0; i <= GRID; i += 4) {
     gridLines.push(
       <line key={`v${i}`} x1={toPx(i)} y1={toPx(0)} x2={toPx(i)} y2={toPx(GRID)}
-        stroke="#e2e8f0" strokeWidth={i % 12 === 0 ? 1 : 0.5} />,
+        stroke={i % 12 === 0 ? "rgba(127,232,255,0.26)" : "rgba(127,232,255,0.13)"} strokeWidth={i % 12 === 0 ? 1 : 0.5} />,
       <line key={`h${i}`} x1={toPx(0)} y1={toPx(i)} x2={toPx(GRID)} y2={toPx(i)}
-        stroke="#e2e8f0" strokeWidth={i % 12 === 0 ? 1 : 0.5} />
+        stroke={i % 12 === 0 ? "rgba(127,232,255,0.26)" : "rgba(127,232,255,0.13)"} strokeWidth={i % 12 === 0 ? 1 : 0.5} />
     );
   }
 
@@ -228,7 +229,7 @@ export default function SectionDrawer({ value, onChange }) {
         >
           {/* Grid */}
           <rect x={toPx(0)} y={toPx(0)} width={GRID * PX} height={GRID * PX}
-            fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
+            fill="rgba(0,20,32,0.55)" stroke="rgba(127,232,255,0.3)" strokeWidth="1" />
           {gridLines}
 
           {/* Rings */}
@@ -242,14 +243,14 @@ export default function SectionDrawer({ value, onChange }) {
               <g key={ri}>
                 <path
                   d={d}
-                  fill={ring.closed ? (isHole ? '#ffffff' : 'rgba(59,130,246,0.12)') : 'none'}
+                  fill={ring.closed ? (isHole ? '#03151f' : 'rgba(127,232,255,0.12)') : 'none'}
                   stroke={color}
                   strokeWidth="2"
                   strokeDasharray={isHole ? '5,3' : 'none'}
                 />
                 {ring.points.map((p, i) => (
                   <circle key={i} cx={toPx(p.x)} cy={toPx(p.y)} r={i === 0 && !ring.closed ? 5 : 3.5}
-                    fill={i === 0 && !ring.closed ? '#22c55e' : color} stroke="#fff" strokeWidth="1" />
+                    fill={i === 0 && !ring.closed ? theme.ok : color} stroke={theme.dotStroke} strokeWidth="1" />
                 ))}
               </g>
             );
@@ -258,21 +259,21 @@ export default function SectionDrawer({ value, onChange }) {
           {/* Rubber-band from last node to cursor */}
           {lastNode && (
             <line x1={toPx(lastNode.x)} y1={toPx(lastNode.y)} x2={toPx(cursor.x)} y2={toPx(cursor.y)}
-              stroke="#3b82f6" strokeWidth="1.2" strokeDasharray="4,3" />
+              stroke={theme.cyan} strokeWidth="1.2" strokeDasharray="4,3" />
           )}
 
           {/* Cursor crosshair */}
           <g>
             <line x1={toPx(cursor.x) - 8} y1={toPx(cursor.y)} x2={toPx(cursor.x) + 8} y2={toPx(cursor.y)}
-              stroke="#ef4444" strokeWidth="1.4" />
+              stroke={theme.amber} strokeWidth="1.4" />
             <line x1={toPx(cursor.x)} y1={toPx(cursor.y) - 8} x2={toPx(cursor.x)} y2={toPx(cursor.y) + 8}
-              stroke="#ef4444" strokeWidth="1.4" />
+              stroke={theme.amber} strokeWidth="1.4" />
           </g>
 
           {/* Live Δx / Δy readout near the cursor */}
           {lastNode && (
             <text x={toPx(cursor.x) + 10} y={toPx(cursor.y) - 8} className="drawer-delta"
-              fontSize="12" fill="#0f172a">
+              fontSize="11" fill={theme.cyanBright}>
               Δx={dx.toFixed(2)}&quot;, Δy={dy.toFixed(2)}&quot;
             </text>
           )}
