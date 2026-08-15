@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { toPrintColor } from '../theme';
 
 // ─── Greek / math text helpers ───────────────────────────────────────────────
 
@@ -1134,6 +1135,9 @@ function svgToDataUrl(svgEl) {
   });
 }
 
+/* Properties whose values are colors, and so need remapping for print. */
+const COLOR_PROPS = new Set(['fill', 'stroke', 'color', 'stop-color']);
+
 function inlineStyles(original, clone) {
   if (original.nodeType !== 1) return;
 
@@ -1142,12 +1146,16 @@ function inlineStyles(original, clone) {
     'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-dashoffset',
     'stroke-linecap', 'stroke-linejoin', 'stroke-opacity', 'fill-opacity',
     'opacity', 'font-family', 'font-size', 'font-weight', 'font-style',
-    'text-anchor', 'dominant-baseline', 'color', 'visibility', 'display',
+    'text-anchor', 'dominant-baseline', 'color', 'stop-color', 'visibility',
+    'display',
   ];
 
   for (const prop of props) {
     const val = computed.getPropertyValue(prop);
-    if (val) clone.style.setProperty(prop, val);
+    if (!val) continue;
+    // The report prints on white, so the dark-UI palette is swapped for its
+    // print-safe counterpart on the way into the clone.
+    clone.style.setProperty(prop, COLOR_PROPS.has(prop) ? toPrintColor(val) : val);
   }
 
   const origChildren = original.children;
