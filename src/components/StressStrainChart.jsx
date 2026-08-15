@@ -1,5 +1,6 @@
 import { generateStressStrainCurve } from '../utils/beamCalculations';
 import steelPresets from '../data/steelPresets';
+import theme from '../theme';
 
 /**
  * SVG stress-strain chart showing the power formula curves for all steel types
@@ -26,7 +27,7 @@ export default function StressStrainChart({ results }) {
   const yScale = (val) => margin.top + plotH - (val / maxStress) * plotH;
 
   // Colors for each curve
-  const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
+  const colors = theme.series;
 
   // Grid lines
   const xTicks = [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05];
@@ -44,7 +45,7 @@ export default function StressStrainChart({ results }) {
             y1={margin.top}
             x2={xScale(t)}
             y2={margin.top + plotH}
-            stroke="#e2e8f0"
+            stroke={theme.grid}
             strokeWidth="0.5"
           />
         ))}
@@ -55,7 +56,7 @@ export default function StressStrainChart({ results }) {
             y1={yScale(t)}
             x2={margin.left + plotW}
             y2={yScale(t)}
-            stroke="#e2e8f0"
+            stroke={theme.grid}
             strokeWidth="0.5"
           />
         ))}
@@ -66,16 +67,16 @@ export default function StressStrainChart({ results }) {
           y1={margin.top + plotH}
           x2={margin.left + plotW}
           y2={margin.top + plotH}
-          stroke="#334155"
-          strokeWidth="1.5"
+          stroke={theme.axis}
+          strokeWidth="1"
         />
         <line
           x1={margin.left}
           y1={margin.top}
           x2={margin.left}
           y2={margin.top + plotH}
-          stroke="#334155"
-          strokeWidth="1.5"
+          stroke={theme.axis}
+          strokeWidth="1"
         />
 
         {/* Axis labels */}
@@ -138,7 +139,7 @@ export default function StressStrainChart({ results }) {
             const y = yScale(Math.abs(lr.stress));
             return (
               <g key={idx}>
-                <circle cx={x} cy={y} r="5" fill="#ef4444" stroke="#fff" strokeWidth="1.5" />
+                <circle cx={x} cy={y} r="4.5" fill={theme.ok} stroke={theme.dotStroke} strokeWidth="1.5" />
                 <text x={x + 8} y={y - 6} className="chart-point-label">
                   L<tspan baselineShift="sub" fontSize="8">{idx + 1}</tspan>
                 </text>

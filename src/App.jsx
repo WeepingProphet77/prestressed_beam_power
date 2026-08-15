@@ -106,6 +106,9 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Ambient scan sweep — decorative HUD layer */}
+      <div className="sweep" aria-hidden="true" />
+
       <header className="app-header">
         <div className="header-content">
           <div className="header-badge">ACI 318-19</div>

@@ -1,3 +1,5 @@
+import theme from '../theme';
+
 /**
  * SVG cross-section diagram of the beam with reinforcement layers,
  * neutral axis, and Whitney stress block visualization.
@@ -26,7 +28,8 @@ export default function BeamDiagram({ section, results }) {
   const drawW = maxWidth * scale;
   const drawH = h * scale;
   const svgW = drawW + padding * 2 + 180;
-  const svgH = drawH + padding * 2;
+  // Extra headroom below the section so the two-line legend clears the viewBox
+  const svgH = drawH + padding * 2 + 18;
 
   const ox = padding + 60; // origin x (left edge of beam)
   const oy = padding;      // origin y (top of beam)
@@ -336,8 +339,12 @@ export default function BeamDiagram({ section, results }) {
       >
         <defs>
           <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6">
-            <path d="M0,6 L6,0" stroke="#6b9bd2" strokeWidth="0.8" />
+            <path d="M0,6 L6,0" stroke={theme.hatchStroke} strokeWidth="0.8" />
           </pattern>
+          <linearGradient id="concFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(127,232,255,0.16)" />
+            <stop offset="100%" stopColor="rgba(127,232,255,0.03)" />
+          </linearGradient>
           {isCustom && (
             <clipPath id="stressClip">
               {/* Strip from the top fiber down to depth a */}
@@ -346,21 +353,48 @@ export default function BeamDiagram({ section, results }) {
           )}
         </defs>
 
+        {/* Concrete body */}
+        <path
+          d={outlinePath}
+          fillRule={isCustom ? 'evenodd' : 'nonzero'}
+          fill="url(#concFill)"
+          stroke="none"
+        />
+
         {/* Stress block fill */}
         {isCustom ? (
           <g clipPath="url(#stressClip)">
-            <path d={stressBlockPath} fillRule="evenodd" fill="#dbeafe" stroke="none" />
-            <path d={stressBlockPath} fillRule="evenodd" fill="url(#hatch)" stroke="#3b82f6" strokeWidth="1" />
+            <path d={stressBlockPath} fillRule="evenodd" fill={theme.stressBlockFill} stroke="none" />
+            <path
+              d={stressBlockPath}
+              fillRule="evenodd"
+              fill="url(#hatch)"
+              stroke={theme.stressBlockStroke}
+              strokeWidth="1"
+              strokeDasharray="4,3"
+            />
           </g>
         ) : (
           <>
-            <path d={stressBlockPath} fill="#dbeafe" stroke="none" />
-            <path d={stressBlockPath} fill="url(#hatch)" stroke="#3b82f6" strokeWidth="1" />
+            <path d={stressBlockPath} fill={theme.stressBlockFill} stroke="none" />
+            <path
+              d={stressBlockPath}
+              fill="url(#hatch)"
+              stroke={theme.stressBlockStroke}
+              strokeWidth="1"
+              strokeDasharray="4,3"
+            />
           </>
         )}
 
         {/* Beam outline */}
-        <path d={outlinePath} fillRule={isCustom ? 'evenodd' : 'nonzero'} fill="none" stroke="#1e293b" strokeWidth="2.5" />
+        <path
+          d={outlinePath}
+          fillRule={isCustom ? 'evenodd' : 'nonzero'}
+          fill="none"
+          stroke={theme.concreteStroke}
+          strokeWidth="1.8"
+        />
 
         {/* Neutral axis */}
         <line
@@ -368,9 +402,9 @@ export default function BeamDiagram({ section, results }) {
           y1={naY}
           x2={beamRightX + 6}
           y2={naY}
-          stroke="#ef4444"
-          strokeWidth="1.5"
-          strokeDasharray="6,3"
+          stroke={theme.neutralAxis}
+          strokeWidth="1.3"
+          strokeDasharray="7,4"
         />
         <text x={annotX} y={naY + 4} className="diagram-label na-label">
           c = {c.toFixed(2)}&quot;
@@ -397,16 +431,16 @@ export default function BeamDiagram({ section, results }) {
                 cx={layerCx - 10}
                 cy={ly}
                 r={dotR}
-                fill={isTension ? '#22c55e' : '#f59e0b'}
-                stroke="#1e293b"
+                fill={isTension ? theme.tensionSteel : theme.compressionSteel}
+                stroke={theme.dotStroke}
                 strokeWidth="1"
               />
               <circle
                 cx={layerCx + 10}
                 cy={ly}
                 r={dotR}
-                fill={isTension ? '#22c55e' : '#f59e0b'}
-                stroke="#1e293b"
+                fill={isTension ? theme.tensionSteel : theme.compressionSteel}
+                stroke={theme.dotStroke}
                 strokeWidth="1"
               />
               {/* Label */}
@@ -418,9 +452,9 @@ export default function BeamDiagram({ section, results }) {
         })}
 
         {/* Dimension: total depth */}
-        <line x1={ox - 25} y1={oy} x2={ox - 25} y2={oy + drawH} stroke="#64748b" strokeWidth="1" />
-        <line x1={ox - 30} y1={oy} x2={ox - 20} y2={oy} stroke="#64748b" strokeWidth="1" />
-        <line x1={ox - 30} y1={oy + drawH} x2={ox - 20} y2={oy + drawH} stroke="#64748b" strokeWidth="1" />
+        <line x1={ox - 25} y1={oy} x2={ox - 25} y2={oy + drawH} stroke={theme.axis} strokeWidth="1" strokeDasharray="3,3" />
+        <line x1={ox - 30} y1={oy} x2={ox - 20} y2={oy} stroke={theme.axis} strokeWidth="1" />
+        <line x1={ox - 30} y1={oy + drawH} x2={ox - 20} y2={oy + drawH} stroke={theme.axis} strokeWidth="1" />
         <text
           x={ox - 28}
           y={oy + drawH / 2}
@@ -432,12 +466,23 @@ export default function BeamDiagram({ section, results }) {
 
         {/* Legend */}
         <g transform={`translate(${ox}, ${oy + drawH + 20})`}>
-          <rect x="0" y="0" width="12" height="12" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1" />
-          <text x="16" y="10" className="diagram-label legend-text">Whitney stress block (0.85f&#x2032;c)</text>
-          <line x1="0" y1="22" x2="12" y2="22" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4,2" />
-          <text x="16" y="26" className="diagram-label legend-text">Neutral axis</text>
+          <rect
+            x="0"
+            y="0"
+            width="10"
+            height="10"
+            fill={theme.stressBlockFill}
+            stroke={theme.stressBlockStroke}
+            strokeWidth="1"
+          />
+          <text x="15" y="9" className="diagram-label legend-text">Whitney stress block (0.85f&#x2032;c)</text>
+          <line x1="0" y1="21" x2="10" y2="21" stroke={theme.neutralAxis} strokeWidth="1.5" strokeDasharray="4,2" />
+          <text x="15" y="24" className="diagram-label legend-text">Neutral axis</text>
         </g>
       </svg>
+
+      {/* Decorative instrument ring */}
+      <div className="ring" aria-hidden="true" />
     </div>
   );
 }

@@ -1,4 +1,7 @@
-/* ── Reset & Base ── */
+/* ══════════════════════════════════════════════════════════════════════════
+   Reset, design tokens, and ambient holographic layers
+   ══════════════════════════════════════════════════════════════════════════ */
+
 *,
 *::before,
 *::after {
@@ -8,66 +11,152 @@
 }
 
 :root {
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-200: #bfdbfe;
-  --blue-300: #93c5fd;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-800: #1e40af;
-  --blue-900: #1e3a5f;
+  /* ── Holographic HUD palette ── */
+  --cy: #7fe8ff;              /* primary hologram cyan */
+  --cy-dim: #3d92a8;          /* muted cyan for secondary text */
+  --cy-bright: #dffaff;       /* near-white cyan for readouts */
+  --am: #ffb347;              /* amber accent */
+  --am-dim: #b4783a;
+  --vi: #b78bff;              /* violet accent */
+  --ok: #5cffc0;              /* pass / tension */
+  --bad: #ff6b7a;             /* fail */
+  --ink: #04121a;             /* deep ink for text on bright fills */
 
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
+  --panel: rgba(10, 40, 58, 0.34);
+  --panel-solid: #06202e;
+  --panel-deep: rgba(0, 30, 45, 0.6);
+  --line: rgba(127, 232, 255, 0.3);
+  --line-soft: rgba(127, 232, 255, 0.14);
+  --glow: 0 0 6px rgba(127, 232, 255, 0.55);
+  --glow-strong: 0 0 18px rgba(127, 232, 255, 0.75);
 
-  --green-50: #f0fdf4;
-  --green-100: #dcfce7;
-  --green-500: #22c55e;
-  --green-700: #15803d;
+  --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
-  --amber-50: #fffbeb;
-  --amber-100: #fef3c7;
-  --amber-500: #f59e0b;
-  --amber-700: #b45309;
+  /* ── Legacy aliases ──
+     Older rules and inline SVG fills still reference these names; they are
+     remapped onto the HUD palette so nothing falls back to a light theme. */
+  --blue-50: rgba(127, 232, 255, 0.08);
+  --blue-100: rgba(127, 232, 255, 0.14);
+  --blue-200: rgba(127, 232, 255, 0.3);
+  --blue-300: var(--cy-dim);
+  --blue-500: var(--cy);
+  --blue-600: var(--cy);
+  --blue-700: var(--cy-bright);
+  --blue-800: #0b3346;
+  --blue-900: #04121a;
 
-  --red-50: #fef2f2;
-  --red-100: #fee2e2;
-  --red-500: #ef4444;
-  --red-700: #b91c1c;
+  --slate-50: rgba(0, 30, 45, 0.5);
+  --slate-100: rgba(127, 232, 255, 0.08);
+  --slate-200: var(--line);
+  --slate-300: var(--cy-dim);
+  --slate-400: var(--cy-dim);
+  --slate-500: var(--cy-dim);
+  --slate-600: var(--cy);
+  --slate-700: var(--cy);
+  --slate-800: var(--cy-bright);
+  --slate-900: #01080d;
 
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-xs: 4px;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.06);
+  --green-50: rgba(92, 255, 192, 0.1);
+  --green-100: rgba(92, 255, 192, 0.18);
+  --green-500: var(--ok);
+  --green-700: var(--ok);
 
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--slate-800);
-  background-color: var(--slate-100);
+  --amber-50: rgba(255, 179, 71, 0.1);
+  --amber-100: rgba(255, 179, 71, 0.18);
+  --amber-500: var(--am);
+  --amber-700: var(--am);
+
+  --red-50: rgba(255, 107, 122, 0.1);
+  --red-100: rgba(255, 107, 122, 0.18);
+  --red-500: var(--bad);
+  --red-700: var(--bad);
+
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-xs: 0px;
+  --shadow-sm: 0 0 10px rgba(0, 0, 0, 0.4);
+  --shadow: 0 0 14px rgba(0, 0, 0, 0.45);
+  --shadow-md: inset 0 0 40px rgba(20, 120, 160, 0.1), 0 0 22px rgba(0, 0, 0, 0.5);
+  --shadow-lg: inset 0 0 50px rgba(20, 120, 160, 0.14), 0 0 30px rgba(0, 0, 0, 0.6);
+
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--cy);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(24, 96, 128, 0.4), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 90% 110%, rgba(90, 50, 140, 0.28), transparent 60%),
+    #01080d;
+  background-attachment: fixed;
+  color: var(--cy);
+}
+
+/* ── Ambient layer: fine engineering grid ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(127, 232, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 232, 255, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 100%);
+}
+
+/* ── Ambient layer: CRT scanlines ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+/* ── Ambient layer: travelling scan sweep ── */
+.sweep {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 150px;
+  z-index: 98;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(127, 232, 255, 0.07) 45%,
+    rgba(127, 232, 255, 0.13) 50%,
+    transparent
+  );
+  animation: sweep 7s linear infinite;
+}
+
+@keyframes sweep {
+  from { top: -160px; }
+  to   { top: 100%; }
 }
 
 #root {
+  position: relative;
+  z-index: 2;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -83,7 +172,59 @@ button {
   cursor: pointer;
 }
 
-input, select {
+input,
+select,
+textarea {
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 12.5px;
+}
+
+/* Dark-native form controls: keep native pickers (date, select arrow) legible */
+input,
+select {
+  color-scheme: dark;
+}
+
+::selection {
+  background: rgba(127, 232, 255, 0.3);
+  color: var(--cy-bright);
+}
+
+/* Scrollbars tuned to the HUD */
+* {
+  scrollbar-color: rgba(127, 232, 255, 0.35) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(0, 30, 45, 0.5);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(127, 232, 255, 0.28);
+  border: 1px solid var(--line);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(127, 232, 255, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep {
+    animation: none;
+    display: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
