@@ -1,61 +1,45 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 /**
- * Phase 0 guardrail for the UI Style feature.
+ * Guardrails for the token layer.
  *
- * A style swaps colors by overriding the `--*-rgb` triplets in `:root`. Any raw
- * color value written elsewhere in the stylesheets is a value a style cannot
- * reach, so it would silently keep the old palette. These tests keep the
- * stylesheets free of them.
+ * The split matters: `index.css` and `App.css` are the *base layer*. They
+ * define structure and consume tokens, but own no colors, no spacing values
+ * and no ornament — otherwise a UI style could not reach them. Concrete values
+ * live in each style's own stylesheet under `src/styles/`.
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, '..');
 const read = (f) => readFileSync(join(src, f), 'utf8');
 
-/* rgb()/rgba() with a numeric first argument — `rgba(var(--x-rgb), .3)` is fine,
-   `rgba(127, 232, 255, .3)` is not — plus any hex literal. */
-const LITERAL = /rgba?\(\s*\d|#[0-9a-fA-F]{3,8}\b/g;
+const BASE_LAYER = ['App.css', 'index.css'];
 
-/* Strip the :root block, which is the one legitimate home for raw values. */
-function outsideRoot(css) {
-  return css.replace(/:root\s*\{[\s\S]*?\n\}/, '');
+/** Every stylesheet a registered style contributes. */
+function styleSheets() {
+  const root = join(src, 'styles');
+  const out = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    for (const f of readdirSync(join(root, entry.name))) {
+      if (f.endsWith('.css')) out.push(readFileSync(join(root, entry.name, f), 'utf8'));
+    }
+  }
+  return out;
 }
 
-describe('CSS color tokens', () => {
-  for (const file of ['App.css', 'index.css']) {
+const LITERAL = /rgba?\(\s*\d|#[0-9a-fA-F]{3,8}\b/g;
+
+describe('base layer owns no concrete values', () => {
+  for (const file of BASE_LAYER) {
     it(`${file} contains no raw color literals`, () => {
       const found = read(file).match(LITERAL) || [];
       expect(found, `raw colors in ${file}: ${found.join(', ')}`).toEqual([]);
     });
   }
-
-  it('App.css defines no colors of its own — the palette lives in index.css', () => {
-    const found = outsideRoot(read('App.css')).match(LITERAL) || [];
-    expect(found).toEqual([]);
-  });
-
-  it('every var() referenced by the stylesheets is defined', () => {
-    const index = read('index.css');
-    const defined = new Set([...index.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]));
-    const used = new Set(
-      [read('App.css'), index].flatMap((css) =>
-        [...css.matchAll(/var\((--[\w-]+)\)/g)].map((m) => m[1])
-      )
-    );
-    const missing = [...used].filter((t) => !defined.has(t));
-    expect(missing, `undefined tokens: ${missing.join(', ')}`).toEqual([]);
-  });
-
-  it('no token is defined in terms of itself', () => {
-    const selfRefs = [...read('index.css').matchAll(/^\s*(--[\w-]+):\s*([^;]+);/gm)]
-      .filter(([, name, value]) => value.includes(`var(${name})`))
-      .map(([, name]) => name);
-    expect(selfRefs, `circular tokens: ${selfRefs.join(', ')}`).toEqual([]);
-  });
 
   it('App.css uses no raw spacing values — padding/margin/gap come from the scale', () => {
     const found = [
@@ -66,19 +50,57 @@ describe('CSS color tokens', () => {
     expect(found, `raw spacing: ${found.join(' | ')}`).toEqual([]);
   });
 
-  it('the density scale is defined and scales with --density', () => {
-    const index = read('index.css');
-    expect(index).toMatch(/--density:\s*1\s*;/);
-    for (let i = 1; i <= 7; i++) {
-      const decl = new RegExp(`--space-${i}:\\s*calc\\([\\d.]+px \\* var\\(--density\\)\\)`);
-      expect(index, `--space-${i} must scale with --density`).toMatch(decl);
-    }
+  it('the base layer defines no palette or spacing tokens — styles do', () => {
+    const owned = BASE_LAYER.flatMap((f) =>
+      [...read(f).matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1])
+    ).filter((t) => /-rgb$/.test(t) || /^--space-\d/.test(t) || t === '--density');
+    expect(owned, `base layer must not define: ${owned.join(', ')}`).toEqual([]);
+  });
+});
+
+describe('token graph', () => {
+  const all = [...BASE_LAYER.map(read), ...styleSheets()];
+
+  it('every var() referenced anywhere is defined by some stylesheet', () => {
+    const defined = new Set(all.flatMap((css) => [...css.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1])));
+    const used = new Set(all.flatMap((css) => [...css.matchAll(/var\((--[\w-]+)\)/g)].map((m) => m[1])));
+    const missing = [...used].filter((t) => !defined.has(t));
+    expect(missing, `undefined tokens: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('no token is defined in terms of itself', () => {
+    const selfRefs = all.flatMap((css) =>
+      [...css.matchAll(/^\s*(--[\w-]+):\s*([^;]+);/gm)]
+        .filter(([, name, value]) => value.includes(`var(${name})`))
+        .map(([, name]) => name)
+    );
+    expect(selfRefs, `circular tokens: ${selfRefs.join(', ')}`).toEqual([]);
   });
 
   it('each --*-rgb token holds a bare triplet, so rgba() can compose it', () => {
-    const bad = [...read('index.css').matchAll(/^\s*(--[\w-]+-rgb):\s*([^;]+);/gm)]
-      .filter(([, , value]) => !/^\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*$/.test(value))
-      .map(([, name]) => name);
+    const bad = all.flatMap((css) =>
+      [...css.matchAll(/^\s*(--[\w-]+-rgb):\s*([^;]+);/gm)]
+        .filter(([, , value]) => !/^\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*$/.test(value))
+        .map(([, name]) => name)
+    );
     expect(bad, `malformed triplets: ${bad.join(', ')}`).toEqual([]);
   });
+});
+
+describe('every style supplies the token contract', () => {
+  /* A style that omits these renders the app unstyled rather than restyled. */
+  const REQUIRED = ['--cy-rgb', '--am-rgb', '--vi-rgb', '--ok-rgb', '--bad-rgb', '--ink-rgb', '--density'];
+
+  for (const [i, css] of styleSheets().entries()) {
+    it(`style sheet #${i + 1} defines the required tokens and density scale`, () => {
+      const defined = new Set([...css.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]));
+      const missing = REQUIRED.filter((t) => !defined.has(t));
+      expect(missing, `missing: ${missing.join(', ')}`).toEqual([]);
+      for (let step = 1; step <= 7; step++) {
+        expect(css, `--space-${step} must scale with --density`).toMatch(
+          new RegExp(`--space-${step}:\\s*calc\\([\\d.]+px \\* var\\(--density\\)\\)`)
+        );
+      }
+    });
+  }
 });

@@ -23,25 +23,6 @@
   margin: 0 auto var(--space-5);
 }
 
-.app-header::before,
-.app-header::after {
-  content: '';
-  flex: none;
-  pointer-events: none;
-}
-
-.app-header::before {
-  width: 96px;
-  background: linear-gradient(90deg, var(--am), rgba(var(--am-rgb), 0.35));
-  border-radius: 14px 0 0 14px;
-}
-
-.app-header::after {
-  width: 52px;
-  background: linear-gradient(90deg, rgba(var(--vi-rgb), 0.35), var(--vi));
-  border-radius: 0 14px 14px 0;
-}
-
 .header-content {
   flex: 1;
   min-width: 0;
@@ -167,51 +148,29 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Corner brackets */
-.input-form::before,
-.input-form::after,
-.design-gauges::before,
-.design-gauges::after,
-.results-panel::before,
-.results-panel::after,
-.beam-diagram::before,
-.beam-diagram::after,
-.strain-diagram::before,
-.strain-diagram::after,
-.stress-strain-chart::before,
-.stress-strain-chart::after {
-  content: '';
-  position: absolute;
-  width: 16px;
-  height: 16px;
+/* ══════════════════════════════════════════════════════════════════════════
+   Style hooks — the base layer positions these and draws nothing in them.
+   A UI style fills them via its own stylesheet; a style that wants no
+   ornament simply leaves them empty.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Host for the active style's <Ambience />. Its children are the style's own.
+   Deliberately carries no z-index, so it does not open a stacking context that
+   would clamp the style's layers. Layer order is the style's to decide, via
+   z-index on its own elements — Star Trek Holo puts its grid behind the UI and
+   its scanlines in front. */
+.ui-ambience {
+  position: fixed;
+  inset: 0;
   pointer-events: none;
-  border: 1.5px solid var(--cy);
-  opacity: 0.8;
-  z-index: 1;
 }
 
-.input-form::before,
-.design-gauges::before,
-.results-panel::before,
-.beam-diagram::before,
-.strain-diagram::before,
-.stress-strain-chart::before {
-  top: -1px;
-  left: -1px;
-  border-right: 0;
-  border-bottom: 0;
-}
-
-.input-form::after,
-.design-gauges::after,
-.results-panel::after,
-.beam-diagram::after,
-.strain-diagram::after,
-.stress-strain-chart::after {
-  bottom: -1px;
-  right: -1px;
-  border-left: 0;
-  border-top: 0;
+/* Ornament slots. Empty by default — no borders, no content. */
+.app-header::before,
+.app-header::after {
+  content: '';
+  flex: none;
+  pointer-events: none;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1587,33 +1546,6 @@
 .strain-diagram svg,
 .stress-strain-chart svg {
   display: block;
-}
-
-/* Rotating instrument ring in the corner of the section viewport */
-.ring {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  border: 1px dashed rgba(var(--cy-rgb), 0.32);
-  animation: spin 14s linear infinite;
-  pointer-events: none;
-}
-
-.ring::after {
-  content: '';
-  position: absolute;
-  inset: 10px;
-  border-radius: 50%;
-  border: 1px solid rgba(var(--am-rgb), 0.32);
-  border-top-color: transparent;
-  border-left-color: transparent;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* ── SVG text styles ── */

@@ -1,6 +1,22 @@
 <!doctype html>
-<html lang="en">
+<!-- The default UI style is set here rather than by React so the token blocks
+     apply on the very first paint, and so the app is still styled if the
+     script fails to load. The inline script below upgrades it to the stored
+     preference before paint, avoiding a flash of the wrong style. -->
+<html lang="en" data-ui-style="star-trek-holo">
   <head>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('ui-style');
+          if (stored && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(stored)) {
+            document.documentElement.setAttribute('data-ui-style', stored);
+          }
+        } catch (e) {
+          /* Storage unavailable — the default attribute already applies. */
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
