@@ -12,7 +12,7 @@
 
 :root {
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--text-5);
   line-height: 1.55;
   color: var(--accent-1);
   -webkit-font-smoothing: antialiased;

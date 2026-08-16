@@ -79,7 +79,27 @@
     --glow: 0 0 6px rgba(var(--accent-1-rgb), 0.55);
     --glow-strong: 0 0 18px rgba(var(--accent-1-rgb), 0.75);
 
-    --font: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+    /* ══ Type scale ══
+     Every font-size in the app chrome comes from these steps. The floor is
+     11px: below that, uppercase text with this much letterspacing stops being
+     comfortably readable, which most of the secondary text used to be.
+
+     A style adjusts the whole scale with --text-scale — useful because a serif
+     at a given px reads smaller than a monospace does. SVG text inside the
+     diagrams is deliberately not on this scale: it is sized to its viewBox and
+     is what the PDF captures. */
+  --text-scale: 1;
+  --text-1: calc(11px * var(--text-scale));   /* dense numeric ticks */
+  --text-2: calc(12px * var(--text-scale));   /* captions, notes, footnotes */
+  --text-3: calc(13px * var(--text-scale));   /* field labels, hints */
+  --text-4: calc(14px * var(--text-scale));   /* headings, table text */
+  --text-5: calc(15px * var(--text-scale));   /* inputs, primary body */
+  --text-6: calc(17px * var(--text-scale));
+  --text-7: calc(19px * var(--text-scale));   /* page title */
+  --text-display: calc(34px * var(--text-scale));
+  --text-hero: calc(46px * var(--text-scale));
+
+  --font: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
     /* ══ Density scale ══
        Every padding, margin and gap in App.css comes from these seven steps.

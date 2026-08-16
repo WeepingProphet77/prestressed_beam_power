@@ -41,7 +41,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-2) var(--space-4);
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 700;
   letter-spacing: 0.22em;
   color: var(--ink);
@@ -57,7 +57,7 @@
 }
 
 .header-text h1 {
-  font-size: 17px;
+  font-size: var(--text-7);
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -68,7 +68,7 @@
 .header-text .subtitle {
   display: block;
   margin-top: var(--space-2);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 400;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -182,7 +182,7 @@
 }
 
 .style-selector-label {
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -193,7 +193,7 @@
 .style-selector select {
   padding: var(--space-2) var(--space-3);
   font-family: inherit;
-  font-size: 10.5px;
+  font-size: var(--text-4);
   color: var(--accent-1-bright);
   background: var(--panel-deep);
   border: 1px solid var(--line);
@@ -226,7 +226,7 @@
   margin-top: auto;
   padding: var(--space-6) var(--space-6) var(--space-7);
   text-align: center;
-  font-size: 9px;
+  font-size: var(--text-2);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent-1-dim);
@@ -249,7 +249,7 @@
 }
 
 .app-footer .disclaimer {
-  font-size: 8.5px;
+  font-size: var(--text-2);
   letter-spacing: 0.18em;
   opacity: 0.62;
   font-style: normal;
@@ -286,20 +286,20 @@
   background: var(--danger);
   color: var(--ink);
   font-weight: 700;
-  font-size: 11px;
+  font-size: var(--text-4);
 }
 
 .error-banner strong {
   display: block;
   margin-bottom: var(--space-1);
-  font-size: 10px;
+  font-size: var(--text-3);
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
 .error-banner p {
   margin: 0;
-  font-size: 10.5px;
+  font-size: var(--text-4);
   line-height: 1.5;
   color: var(--danger-bright);
   letter-spacing: 0.04em;
@@ -324,7 +324,7 @@
   gap: var(--space-3);
   margin-bottom: var(--space-4);
   padding-bottom: var(--space-3);
-  font-size: 10.5px;
+  font-size: var(--text-4);
   font-weight: 600;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -358,7 +358,7 @@
   flex: 1 1 0;
   min-width: 150px;
   max-width: 220px;
-  font-size: 10px;
+  font-size: var(--text-3);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent-1);
@@ -367,7 +367,7 @@
 
 .form-row label sub,
 .form-row label sup {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
   display: inline;
   line-height: 1;
   vertical-align: baseline;
@@ -384,7 +384,7 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size: var(--text-5);
   color: var(--accent-1-bright);
   text-align: right;
   background: var(--panel-deep);
@@ -396,6 +396,8 @@
 .form-row select {
   text-align: left;
   text-transform: none;
+  /* Option labels are far longer than the numeric inputs beside them. */
+  font-size: var(--text-4);
 }
 
 .form-row input:focus,
@@ -432,7 +434,7 @@
 .computed-value {
   padding: var(--space-2) var(--space-3);
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size: var(--text-5);
   text-align: right;
   color: var(--accent-2);
   background: rgba(var(--accent-2-rgb), 0.07);
@@ -446,7 +448,7 @@
 }
 
 .field-note {
-  font-size: 8.5px;
+  font-size: var(--text-2);
   letter-spacing: 0.12em;
   color: var(--accent-1-dim);
   text-transform: uppercase;
@@ -456,7 +458,7 @@
 .layers-info {
   margin-bottom: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   line-height: 1.6;
   letter-spacing: 0.06em;
   color: var(--accent-1-dim);
@@ -489,7 +491,7 @@
 }
 
 .layer-number {
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 700;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -503,7 +505,7 @@
   width: 20px;
   height: 20px;
   line-height: 1;
-  font-size: 13px;
+  font-size: var(--text-5);
   color: var(--danger);
   background: none;
   border: 1px solid rgba(var(--danger-rgb), 0.5);
@@ -524,18 +526,18 @@
   padding-top: var(--space-3);
   border-top: 1px dotted rgba(var(--accent-1-rgb), 0.18);
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: var(--text-2);
   letter-spacing: 0.06em;
   color: var(--accent-1-dim);
 }
 
 .preset-info sub {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
 }
 
 .layer-llcoord {
   margin-top: var(--space-2);
-  font-size: 8.5px;
+  font-size: var(--text-2);
   color: var(--accent-3);
   opacity: 0.85;
 }
@@ -546,7 +548,7 @@
   width: 100%;
   padding: var(--space-3);
   font-family: var(--font);
-  font-size: 10px;
+  font-size: var(--text-3);
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -571,7 +573,7 @@
   margin: var(--space-2) var(--space-6) var(--space-6);
   padding: var(--space-4);
   font-family: var(--font);
-  font-size: 11px;
+  font-size: var(--text-4);
   font-weight: 700;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -604,7 +606,7 @@
 .drawer-hint,
 .dxf-units-note {
   margin-bottom: var(--space-2);
-  font-size: 9px;
+  font-size: var(--text-2);
   line-height: 1.6;
   letter-spacing: 0.08em;
   color: var(--accent-1-dim);
@@ -639,7 +641,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: 9px;
+  font-size: var(--text-2);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent-1-dim);
@@ -650,7 +652,7 @@
 .dxf-units-row select {
   padding: var(--space-2) var(--space-3);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: var(--text-5);
   color: var(--accent-1-bright);
   text-align: right;
   background: var(--panel-deep);
@@ -668,7 +670,7 @@
 
 .dxf-upload-row input[type='file'] {
   max-width: 100%;
-  font-size: 9.5px;
+  font-size: var(--text-3);
   color: var(--accent-1-dim);
 }
 
@@ -676,7 +678,7 @@
   margin-right: var(--space-3);
   padding: var(--space-2) var(--space-3);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -701,7 +703,7 @@
 .drawer-controls button {
   padding: var(--space-2) var(--space-3);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -735,7 +737,7 @@
   margin-left: auto;
   padding: var(--space-2) var(--space-3);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -759,7 +761,7 @@
 .drawer-delta {
   margin: var(--space-2) 0;
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   color: var(--accent-1-bright);
   text-shadow: var(--glow);
@@ -767,7 +769,7 @@
 
 .drawer-warning {
   margin-top: var(--space-2);
-  font-size: 9px;
+  font-size: var(--text-2);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--accent-2);
@@ -776,7 +778,7 @@
 .dxf-error {
   margin: var(--space-2) 0;
   padding: var(--space-3) var(--space-3);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   line-height: 1.6;
   letter-spacing: 0.06em;
   color: var(--danger);
@@ -803,7 +805,7 @@
 }
 
 .gauge-hero .hero-label {
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 400;
   letter-spacing: 0.3em;
   text-transform: uppercase;
@@ -811,13 +813,13 @@
 }
 
 .gauge-hero .hero-label sub {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
 }
 
 .gauge-hero .hero-value {
   margin: var(--space-2) 0 var(--space-1);
   font-family: var(--font);
-  font-size: 44px;
+  font-size: var(--text-hero);
   font-weight: 300;
   line-height: 1.15;
   letter-spacing: 0.02em;
@@ -835,13 +837,13 @@
 
 .gauge-hero .hero-sub {
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   letter-spacing: 0.14em;
   color: var(--accent-1-dim);
 }
 
 .gauge-hero .hero-sub sub {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
 }
 
 /* ── Horizontal bar gauges ── */
@@ -866,7 +868,7 @@
 }
 
 .hbar-title {
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -874,19 +876,19 @@
 }
 
 .hbar-title sub {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
 }
 
 .hbar-readout {
   font-family: var(--font);
-  font-size: 11px;
+  font-size: var(--text-4);
   font-weight: 600;
   white-space: nowrap;
   text-shadow: 0 0 8px currentColor;
 }
 
 .hbar-readout sub {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
 }
 
 /* Zone labels above the bar */
@@ -900,7 +902,7 @@
   position: absolute;
   top: 0;
   padding: 0 var(--space-1);
-  font-size: 8px;
+  font-size: var(--text-1);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -996,7 +998,7 @@
 .hbar-marker-label {
   margin-top: var(--space-1);
   font-family: var(--font);
-  font-size: 8px;
+  font-size: var(--text-1);
   letter-spacing: 0.06em;
   line-height: 1.25;
   white-space: nowrap;
@@ -1004,7 +1006,7 @@
 }
 
 .hbar-marker-label sub {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
 }
 
 .hbar-needle-callout {
@@ -1042,7 +1044,7 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--text-3);
   font-weight: 700;
   line-height: 1;
   color: var(--ink);
@@ -1060,7 +1062,7 @@
 }
 
 .badge-label {
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1069,13 +1071,13 @@
 }
 
 .badge-label sub {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
   text-transform: none;
 }
 
 .badge-detail {
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: var(--text-2);
   letter-spacing: 0.04em;
   color: var(--accent-1-dim);
   white-space: nowrap;
@@ -1098,7 +1100,7 @@
   align-items: center;
   padding-bottom: var(--space-3);
   margin-bottom: var(--space-2);
-  font-size: 10.5px;
+  font-size: var(--text-4);
   font-weight: 600;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -1108,7 +1110,7 @@
 
 .results-collapse-hint {
   margin: var(--space-3) 0 var(--space-4);
-  font-size: 8.5px;
+  font-size: var(--text-2);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   font-style: normal;
@@ -1161,7 +1163,7 @@
 
 .collapsible-chevron {
   flex-shrink: 0;
-  font-size: 7px;
+  font-size: var(--text-1);
   color: var(--accent-1-dim);
   transition: color 0.15s;
 }
@@ -1176,7 +1178,7 @@
 
 .collapsible-header h4 {
   margin: 0;
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1211,7 +1213,7 @@
 
 .result-details h4 {
   margin-bottom: var(--space-3);
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -1221,7 +1223,7 @@
 .detail-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10.5px;
+  font-size: var(--text-4);
 }
 
 .detail-table td {
@@ -1256,13 +1258,13 @@
 .layer-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 9.5px;
+  font-size: var(--text-3);
   white-space: nowrap;
 }
 
 .layer-table th {
   padding: var(--space-2) var(--space-3);
-  font-size: 8.5px;
+  font-size: var(--text-2);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1333,7 +1335,7 @@
 .prestress-cracking-section h4,
 .flexural-strength-section h4 {
   margin-bottom: var(--space-3);
-  font-size: 9px;
+  font-size: var(--text-2);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--accent-3);
@@ -1353,7 +1355,7 @@
   display: inline-block;
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1386,7 +1388,7 @@
 
 .formula-title {
   margin-bottom: var(--space-2);
-  font-size: 8.5px;
+  font-size: var(--text-2);
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1396,14 +1398,14 @@
 .formula {
   padding: var(--space-1) 0;
   font-family: var(--font);
-  font-size: 10.5px;
+  font-size: var(--text-4);
   line-height: 1.7;
   color: var(--accent-1-bright);
 }
 
 .formula sub,
 .formula sup {
-  font-size: 0.72em;
+  font-size: max(10px, 0.78em);
 }
 
 .formula-lhs {
@@ -1438,7 +1440,7 @@
 .formula-note {
   margin-top: var(--space-1);
   padding-left: var(--space-3);
-  font-size: 8.5px;
+  font-size: var(--text-2);
   letter-spacing: 0.1em;
   font-style: normal;
   color: var(--accent-1-dim);
@@ -1451,7 +1453,7 @@
 .biaxial-note {
   margin: var(--space-3) 0;
   padding: var(--space-3) var(--space-3);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   line-height: 1.6;
   letter-spacing: 0.06em;
   color: var(--accent-3);
@@ -1464,7 +1466,7 @@
 .biaxial-results h3 {
   margin: var(--space-6) 0 var(--space-2);
   padding-bottom: var(--space-2);
-  font-size: 9px;
+  font-size: var(--text-2);
   letter-spacing: 0.22em;
   color: var(--accent-3);
   border-bottom: 1px dotted rgba(var(--accent-3-rgb), 0.3);
@@ -1473,7 +1475,7 @@
 .biaxial-results .results-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: var(--text-3);
   margin: var(--space-2) 0 var(--space-5);
 }
 
@@ -1485,7 +1487,7 @@
 }
 
 .biaxial-results .results-table th {
-  font-size: 8.5px;
+  font-size: var(--text-2);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1507,7 +1509,7 @@
 }
 
 .biaxial-results .note {
-  font-size: 9px;
+  font-size: var(--text-2);
   line-height: 1.6;
   letter-spacing: 0.06em;
   color: var(--accent-1-dim);
@@ -1528,7 +1530,7 @@
 
 .util-big {
   font-family: var(--font);
-  font-size: 32px;
+  font-size: var(--text-display);
   font-weight: 300;
   line-height: 1;
 }
@@ -1537,7 +1539,7 @@
 .util-banner.fail .util-big { color: var(--danger); text-shadow: 0 0 16px rgba(var(--danger-rgb), 0.6); }
 
 .util-banner strong {
-  font-size: 10px;
+  font-size: var(--text-3);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1546,7 +1548,7 @@
 
 .util-banner p {
   margin: var(--space-2) 0 0;
-  font-size: 9.5px;
+  font-size: var(--text-3);
   line-height: 1.6;
   color: var(--accent-1-dim);
 }
@@ -1579,7 +1581,7 @@
   align-items: center;
   margin-bottom: var(--space-4);
   padding-bottom: var(--space-3);
-  font-size: 10.5px;
+  font-size: var(--text-4);
   font-weight: 600;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -1596,7 +1598,7 @@
 /* ── SVG text styles ── */
 .diagram-label {
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   fill: var(--accent-1-dim);
 }
@@ -1612,25 +1614,25 @@
 }
 
 .diagram-label.steel-label {
-  font-size: 8.5px;
+  font-size: 10.5px;
   fill: var(--accent-1-dim);
 }
 
 .diagram-label.dim-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
   fill: var(--accent-1-dim);
 }
 
 .diagram-label.legend-text {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   fill: var(--accent-1-dim);
 }
 
 .diagram-title {
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1639,20 +1641,20 @@
 
 .strain-value {
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: 10.5px;
   fill: var(--success);
 }
 
 .stress-label {
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: 11.5px;
   font-weight: 500;
   fill: var(--accent-2);
 }
 
 .force-label {
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: 11.5px;
   font-weight: 600;
 }
 
@@ -1663,7 +1665,7 @@
 /* Stress-strain chart */
 .chart-axis-label {
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1672,21 +1674,21 @@
 
 .chart-tick {
   font-family: var(--font);
-  font-size: 7.5px;
+  font-size: 9.5px;
   fill: var(--accent-1-dim);
   opacity: 0.8;
 }
 
 .chart-legend-text {
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   fill: var(--accent-1-dim);
 }
 
 .chart-point-label {
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   fill: var(--success);
 }
@@ -1702,7 +1704,7 @@
   flex-shrink: 0;
   padding: var(--space-3) var(--space-5);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1791,7 +1793,7 @@
 }
 
 .dialog-header h3 {
-  font-size: 10.5px;
+  font-size: var(--text-4);
   font-weight: 600;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -1805,7 +1807,7 @@
   width: 24px;
   height: 24px;
   line-height: 1;
-  font-size: 16px;
+  font-size: var(--text-6);
   color: var(--accent-1-dim);
   background: none;
   border: 1px solid var(--line-soft);
@@ -1842,7 +1844,7 @@
 }
 
 .dialog-label {
-  font-size: 9px;
+  font-size: var(--text-2);
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1853,7 +1855,7 @@
   width: 100%;
   padding: var(--space-3) var(--space-3);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: var(--text-5);
   color: var(--accent-1-bright);
   background: var(--panel-deep);
   border: 1px solid var(--line);
@@ -1885,7 +1887,7 @@
 .btn-dialog-cancel {
   padding: var(--space-3) var(--space-6);
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1903,7 +1905,7 @@
 .btn-dialog-export {
   padding: var(--space-3) var(--space-6);
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: var(--text-3);
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1973,12 +1975,12 @@
   }
 
   .header-text h1 {
-    font-size: 13px;
+    font-size: var(--text-5);
     letter-spacing: 0.18em;
   }
 
   .header-text .subtitle {
-    font-size: 8.5px;
+    font-size: var(--text-2);
     letter-spacing: 0.18em;
   }
 
@@ -2004,12 +2006,12 @@
   }
 
   .gauge-hero .hero-value {
-    font-size: 32px;
+    font-size: var(--text-display);
   }
 
   .hbar-zone-label,
   .hbar-marker-label {
-    font-size: 7px;
+    font-size: var(--text-1);
   }
 
   .gauge-badges {

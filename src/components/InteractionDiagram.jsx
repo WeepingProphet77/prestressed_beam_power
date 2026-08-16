@@ -62,7 +62,7 @@ export default function InteractionDiagram({ results }) {
         ))}
         <text x={SIZE - PAD} y={cy - 6} className="diagram-label" textAnchor="end">+φMx</text>
         <text x={cx + 6} y={PAD + 8} className="diagram-label">+φMy</text>
-        <text x={X(ticks[0] ?? 0)} y={cy + 14} className="diagram-label" fontSize="9">{(ticks[0] ?? 0).toFixed(0)}</text>
+        <text x={X(ticks[0] ?? 0)} y={cy + 14} className="diagram-label" fontSize="11">{(ticks[0] ?? 0).toFixed(0)}</text>
 
         {/* cracking envelope */}
         {crack.length > 2 && (
@@ -81,7 +81,7 @@ export default function InteractionDiagram({ results }) {
         {(sx !== 0 || sy !== 0) && (
           <g>
             <circle cx={X(sx)} cy={Y(sy)} r="4" data-fill-role="stressBlockStroke" data-stroke-role="dotStroke" fill={roles.stressBlockStroke.color} stroke={roles.dotStroke.color} strokeWidth="1" />
-            <text x={X(sx) + 6} y={Y(sy) - 4} className="diagram-label" fontSize="9" data-fill-role="stressBlockStroke" fill={roles.stressBlockStroke.color}>service</text>
+            <text x={X(sx) + 6} y={Y(sy) - 4} className="diagram-label" fontSize="11" data-fill-role="stressBlockStroke" fill={roles.stressBlockStroke.color}>service</text>
           </g>
         )}
 
@@ -91,7 +91,7 @@ export default function InteractionDiagram({ results }) {
             <line x1={cx} y1={cy} x2={X(demand.Mux)} y2={Y(demand.Muy)} data-stroke-role="neutralAxis" stroke={roles.neutralAxis.color} strokeWidth="1" strokeDasharray="3,2" />
             <circle cx={X(demand.Mux)} cy={Y(demand.Muy)} r="4.5"
               data-fill-role={demand.pass ? 'tensionSteel' : 'neutralAxis'} fill={demand.pass ? roles.tensionSteel.color : roles.neutralAxis.color} data-stroke-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1.5" />
-            <text x={X(demand.Mux) + 6} y={Y(demand.Muy) + 4} className="diagram-label" fontSize="9" data-fill-role="neutralAxis" fill={roles.neutralAxis.color}>
+            <text x={X(demand.Mux) + 6} y={Y(demand.Muy) + 4} className="diagram-label" fontSize="11" data-fill-role="neutralAxis" fill={roles.neutralAxis.color}>
               demand
             </text>
           </g>

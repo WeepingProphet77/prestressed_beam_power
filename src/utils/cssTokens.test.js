@@ -50,6 +50,37 @@ describe('base layer owns no concrete values', () => {
     expect(found, `raw spacing: ${found.join(' | ')}`).toEqual([]);
   });
 
+  it('App.css sets no raw font sizes outside the diagram SVG text', () => {
+    /* SVG label sizes are viewBox-relative and land in the PDF, so they stay
+       fixed px on purpose. Everything else must come from the type scale, or a
+       style cannot adjust it. */
+    const SVG_TEXT = /^\.(diagram-label|diagram-title|strain-value|stress-label|force-label|chart-axis-label|chart-tick|chart-legend-text|chart-point-label|drawer-delta)\b/;
+    const lines = read('App.css').split('\n');
+    const offenders = [];
+    let inSvg = false;
+    lines.forEach((line, i) => {
+      const st = line.trimStart();
+      if (st.startsWith('}')) inSvg = false;
+      else if (st.startsWith('.')) inSvg = SVG_TEXT.test(st);
+      if (/font-size:\s*[\d.]+px/.test(line) && !inSvg) {
+        offenders.push(`App.css:${i + 1} ${line.trim()}`);
+      }
+    });
+    expect(offenders, `raw font sizes:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('no rendered text is specced below a readable floor', () => {
+    /* The restyle had 60 of 99 declarations at 9.5px or under. The scale's
+       floor is 11px, and subscripts carry their own 10px minimum. */
+    const css = [read('App.css'), ...styleSheets()].join('\n');
+    const steps = [...css.matchAll(/--text-\d:\s*calc\(([\d.]+)px/g)].map((m) => Number(m[1]));
+    expect(steps.length).toBeGreaterThan(0);
+    expect(Math.min(...steps), 'type scale floor is below 11px').toBeGreaterThanOrEqual(11);
+    for (const m of read('App.css').matchAll(/font-size:\s*max\((\d+)px/g)) {
+      expect(Number(m[1]), 'subscript floor below 10px').toBeGreaterThanOrEqual(10);
+    }
+  });
+
   it('the base layer defines no palette or spacing tokens — styles do', () => {
     const owned = BASE_LAYER.flatMap((f) =>
       [...read(f).matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1])
@@ -99,6 +130,9 @@ describe('every style supplies the token contract', () => {
       for (let step = 1; step <= 7; step++) {
         expect(css, `--space-${step} must scale with --density`).toMatch(
           new RegExp(`--space-${step}:\\s*calc\\([\\d.]+px \\* var\\(--density\\)\\)`)
+        );
+        expect(css, `--text-${step} must scale with --text-scale`).toMatch(
+          new RegExp(`--text-${step}:\\s*calc\\([\\d.]+px \\* var\\(--text-scale\\)\\)`)
         );
       }
     });
