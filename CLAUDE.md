@@ -166,6 +166,64 @@ Fully supported, and *easier* for the PDF (already light). Two consequences:
   pickers and selects render dark) must become per-style, or light styles get
   dark form controls.
 
+## Worked example: "Golden Runes"
+
+A planned style — dark ground, shimmering gold linework, Norse runes scattered as
+ornament, lines broken and cracked with age, drifting gold haze. Testing the plan
+against it exposed gaps worth fixing before any code is written.
+
+| Need | Covered by | Gap |
+| --- | --- | --- |
+| Dark ground, gold palette | Palette tokens | — |
+| Broken / aged lines | Role spec `dash` | — |
+| Runes as scattered ornament | Ornament slots + `<Ambience />` | — |
+| Gold haze | `<Ambience />` | — |
+| **Shimmering** linework | — | Needs animated gradients: an SVG `<defs>` the style owns |
+| **Cracked** (irregular, not dashed) | — | Needs an SVG filter (`feTurbulence` + `feDisplacementMap`) |
+| Runic glyphs (ᚠᚢᚦᚨᚱᚲ) | — | Most system fonts have no Runic block — renders as tofu |
+
+### Amendment 5 — styles may own SVG `<defs>`
+
+Shimmer and cracking are not colors; they are gradients and filters that roles
+reference as `url(#goldShimmer)`. So a style must be able to contribute `<defs>`
+to the diagrams.
+
+**They must be injected inside each diagram's own `<svg>`, not into a shared
+global sprite.** The PDF does `svgEl.cloneNode(true)` on a single diagram and
+serializes it standalone — a `url(#…)` pointing at defs living elsewhere in the
+document resolves on screen and silently breaks in the report. This already works
+today only because `BeamDiagram`'s `concFill` gradient is declared inside its own
+`<svg>`. Keep that rule.
+
+### Amendment 6 — the PDF must map by role, not by computed value
+
+This is the important one, and the current design would fail it.
+
+`inlineStyles` reads `getComputedStyle`, so it sees values, not meaning. If a
+role's stroke is `url(#goldShimmer)`, `toPrintColor` passes it through untouched
+— `printColor.test.js` asserts exactly that passthrough — and the report would
+either print shimmering gold linework or, worse, lose the stroke entirely.
+
+Fix: **diagram elements carry `data-role="concreteStroke"` and the PDF resolves
+colors from the role tag, ignoring the computed value.** Then gradients, filters,
+animations and anything a future style invents cannot reach the report, because
+the report never reads them. This is what makes "the PDF always stays the same"
+structurally true rather than a thing each style must remember to respect.
+
+### Amendment 7 — runes as geometry, not glyphs
+
+Do not rely on Unicode Runic (U+16A0–16FF); most systems have no font for it and
+will render tofu boxes. Use SVG paths, or bundle a subsetted font with an explicit
+fallback. Whatever a style does here, the app must remain correct if the font
+fails to load — the network is not guaranteed.
+
+### Note on decorative legibility
+
+Cracked, broken, shimmering linework is a deliberate effect, and on screen that is
+the point — this is for enjoyment. It is safe precisely because the PDF is
+style-agnostic: the authoritative, readable artifact is always the report. Worth
+keeping that separation intact rather than sanding the styles down.
+
 ### Performance note
 
 Effects are not free. This style already applies `backdrop-filter` on every panel
@@ -225,18 +283,27 @@ pixel-identical, and `grep -cE "rgba?\([0-9]" src/App.css` returns 0.
 ### Phase 2 — Make diagram rendering reactive
 
 Replace the static `import theme from '../theme'` in the 7 components with
-`const roles = useUiStyle().roles`. At the same time, replace the ~45 hardcoded
-`strokeWidth` and ~11 `strokeDasharray` literals with values from the role spec,
-so linework is style-controlled rather than fixed. Mechanical but touches ~130
-call sites — worth its own PR so the diff is reviewable.
+`const roles = useUiStyle().roles`. At the same time:
+
+- Replace the ~45 hardcoded `strokeWidth` and ~11 `strokeDasharray` literals with
+  values from the role spec, so linework is style-controlled rather than fixed.
+- **Tag each styled element with `data-role`** (Amendment 6). Cheap to do here
+  while every call site is already being touched; expensive to retrofit later.
+- Render the active style's `<defs>` inside each diagram `<svg>` (Amendment 5).
+
+Mechanical but touches ~130 call sites — worth its own PR so the diff is
+reviewable.
 
 ### Phase 3 — Decouple the PDF from the active style (required, not optional)
 
-Rewrite `toPrintColor()` as a **role → print spec** map. The report always prints
-in one neutral document palette with its own line weights, no matter what is on
-screen — so a heavy blueprint style and a thin neon style produce the same
-readable report. Add a test asserting every role in the contract has a print
-color at ≥4.5:1 on white, so a new style cannot ship a role the PDF cannot render.
+Rewrite `toPrintColor()` as a **role → print spec** map, resolved from each
+element's `data-role` rather than from its computed color. The report always
+prints in one neutral document palette with its own line weights, no matter what
+is on screen — so a heavy blueprint style, a thin neon style and Golden Runes'
+shimmering gradients all produce the same readable report.
+
+Tests: every role in the contract has a print color at ≥4.5:1 on white, and a
+diagram whose roles use `url(#…)` gradients still prints flat, solid linework.
 
 ### Phase 4 — Selector UI
 
@@ -277,8 +344,10 @@ corrections back into Phases 1–3; that is the point of doing it.
    typefaces. Recommendation: styles declare their font, loaded on demand, so
    five styles do not mean five font downloads on first paint. Note the app must
    still work if a font fails to load — the network is not guaranteed.
-3. **Should the chosen style appear in the PDF header** (e.g. as a label), or is
-   the report entirely style-agnostic? Recommendation: entirely agnostic.
+3. ~~**Should the chosen style appear in the PDF header?**~~ Answered: no. The
+   PDF output always stays the same. Styles are for enjoyment; the report is the
+   engineering deliverable. Amendment 6 makes this structural rather than a
+   convention each new style has to remember.
 4. **Do any planned styles need layout changes**, not just skin — different panel
    arrangement, tabs, a different results structure? Styles as planned cannot do
    that (see "What styles still cannot change"). If any of your ideas need it,
