@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { toPrintColor } from '../theme';
+import { printSpecFor, printTextColor, ensureContrastOnWhite } from '../styles/printSpec';
 
 // ─── Greek / math text helpers ───────────────────────────────────────────────
 
@@ -1150,12 +1150,33 @@ function inlineStyles(original, clone) {
     'display',
   ];
 
+  /* Resolve the report's own drawing from the element's role, never from how
+     it looks on screen. A style's gradients, filters and animations therefore
+     cannot reach the PDF, because nothing here reads them. */
+  const fillSpec = printSpecFor(original.getAttribute('data-fill-role'));
+  const strokeSpec = printSpecFor(original.getAttribute('data-stroke-role'));
+  /* Labels are colored by CSS class, which resolves to style tokens. Resolve
+     them from the class instead, so the report reads the same for any style. */
+  const textColor = original.tagName === 'text' || original.tagName === 'tspan'
+    ? printTextColor(original.getAttribute('class'))
+    : null;
+
   for (const prop of props) {
     const val = computed.getPropertyValue(prop);
     if (!val) continue;
-    // The report prints on white, so the dark-UI palette is swapped for its
-    // print-safe counterpart on the way into the clone.
-    clone.style.setProperty(prop, COLOR_PROPS.has(prop) ? toPrintColor(val) : val);
+
+    let out = val;
+    if (prop === 'fill' && textColor) out = textColor;
+    else if (prop === 'fill' && fillSpec) out = fillSpec.color;
+    else if (prop === 'stroke' && strokeSpec) out = strokeSpec.color;
+    else if (prop === 'stroke-width' && strokeSpec?.width !== undefined) out = String(strokeSpec.width);
+    else if (prop === 'stroke-dasharray' && strokeSpec) out = strokeSpec.dash ?? 'none';
+    else if (COLOR_PROPS.has(prop)) {
+      /* Not role-resolved — text colored by CSS class, say. Force it dark
+         enough to read on paper so an unanticipated style still prints. */
+      out = ensureContrastOnWhite(val);
+    }
+    clone.style.setProperty(prop, out);
   }
 
   const origChildren = original.children;

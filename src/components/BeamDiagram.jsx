@@ -342,7 +342,7 @@ export default function BeamDiagram({ section, results }) {
         <StyleDefs />
         <defs>
           <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6">
-            <path d="M0,6 L6,0" data-role="hatchStroke" stroke={roles.hatchStroke.color} strokeWidth="0.8" />
+            <path d="M0,6 L6,0" data-stroke-role="hatchStroke" stroke={roles.hatchStroke.color} strokeWidth="0.8" />
           </pattern>
           <linearGradient id="concFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="rgba(127,232,255,0.16)" />
@@ -367,23 +367,23 @@ export default function BeamDiagram({ section, results }) {
         {/* Stress block fill */}
         {isCustom ? (
           <g clipPath="url(#stressClip)">
-            <path d={stressBlockPath} fillRule="evenodd" data-role="stressBlockFill" fill={roles.stressBlockFill.color} stroke="none" />
+            <path d={stressBlockPath} fillRule="evenodd" data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color} stroke="none" />
             <path
               d={stressBlockPath}
               fillRule="evenodd"
               fill="url(#hatch)"
-              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
               strokeWidth="1"
               strokeDasharray="4,3"
             />
           </g>
         ) : (
           <>
-            <path d={stressBlockPath} data-role="stressBlockFill" fill={roles.stressBlockFill.color} stroke="none" />
+            <path d={stressBlockPath} data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color} stroke="none" />
             <path
               d={stressBlockPath}
               fill="url(#hatch)"
-              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
               strokeWidth="1"
               strokeDasharray="4,3"
             />
@@ -395,7 +395,7 @@ export default function BeamDiagram({ section, results }) {
           d={outlinePath}
           fillRule={isCustom ? 'evenodd' : 'nonzero'}
           fill="none"
-          data-role="concreteStroke" stroke={roles.concreteStroke.color}
+ data-stroke-role="concreteStroke" stroke={roles.concreteStroke.color}
           strokeWidth="1.8"
         />
 
@@ -405,7 +405,7 @@ export default function BeamDiagram({ section, results }) {
           y1={naY}
           x2={beamRightX + 6}
           y2={naY}
-          data-role="neutralAxis" stroke={roles.neutralAxis.color}
+ data-stroke-role="neutralAxis" stroke={roles.neutralAxis.color}
           strokeWidth="1.3"
           strokeDasharray="7,4"
         />
@@ -435,7 +435,7 @@ export default function BeamDiagram({ section, results }) {
                 cy={ly}
                 r={dotR}
                 fill={isTension ? roles.tensionSteel.color : roles.compressionSteel.color}
-                data-role="dotStroke" stroke={roles.dotStroke.color}
+ data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
                 strokeWidth="1"
               />
               <circle
@@ -443,7 +443,7 @@ export default function BeamDiagram({ section, results }) {
                 cy={ly}
                 r={dotR}
                 fill={isTension ? roles.tensionSteel.color : roles.compressionSteel.color}
-                data-role="dotStroke" stroke={roles.dotStroke.color}
+ data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
                 strokeWidth="1"
               />
               {/* Label */}
@@ -455,9 +455,9 @@ export default function BeamDiagram({ section, results }) {
         })}
 
         {/* Dimension: total depth */}
-        <line x1={ox - 25} y1={oy} x2={ox - 25} y2={oy + drawH} data-role="axis" stroke={roles.axis.color} strokeWidth="1" strokeDasharray="3,3" />
-        <line x1={ox - 30} y1={oy} x2={ox - 20} y2={oy} data-role="axis" stroke={roles.axis.color} strokeWidth="1" />
-        <line x1={ox - 30} y1={oy + drawH} x2={ox - 20} y2={oy + drawH} data-role="axis" stroke={roles.axis.color} strokeWidth="1" />
+        <line x1={ox - 25} y1={oy} x2={ox - 25} y2={oy + drawH} data-stroke-role="axis" stroke={roles.axis.color} strokeWidth="1" strokeDasharray="3,3" />
+        <line x1={ox - 30} y1={oy} x2={ox - 20} y2={oy} data-stroke-role="axis" stroke={roles.axis.color} strokeWidth="1" />
+        <line x1={ox - 30} y1={oy + drawH} x2={ox - 20} y2={oy + drawH} data-stroke-role="axis" stroke={roles.axis.color} strokeWidth="1" />
         <text
           x={ox - 28}
           y={oy + drawH / 2}
@@ -474,12 +474,12 @@ export default function BeamDiagram({ section, results }) {
             y="0"
             width="10"
             height="10"
-            data-role="stressBlockFill" fill={roles.stressBlockFill.color}
-            data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
+ data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color}
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
             strokeWidth="1"
           />
           <text x="15" y="9" className="diagram-label legend-text">Whitney stress block (0.85f&#x2032;c)</text>
-          <line x1="0" y1="21" x2="10" y2="21" data-role="neutralAxis" stroke={roles.neutralAxis.color} strokeWidth="1.5" strokeDasharray="4,2" />
+          <line x1="0" y1="21" x2="10" y2="21" data-stroke-role="neutralAxis" stroke={roles.neutralAxis.color} strokeWidth="1.5" strokeDasharray="4,2" />
           <text x="15" y="24" className="diagram-label legend-text">Neutral axis</text>
         </g>
       </svg>

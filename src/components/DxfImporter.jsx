@@ -150,16 +150,16 @@ export default function DxfImporter({ value, onChange }) {
     preview = (
       <svg className="dxf-preview" viewBox={`0 0 ${w} ${hh}`} width="100%"
         style={{ maxWidth: w, display: 'block' }}>
-        <path d={d} fillRule="evenodd" data-role="concreteFill" fill={roles.concreteFill.color} stroke={roles.concreteStroke.color} strokeWidth="1.5" />
+        <path d={d} fillRule="evenodd" data-fill-role="concreteFill" data-stroke-role="concreteStroke" fill={roles.concreteFill.color} stroke={roles.concreteStroke.color} strokeWidth="1.5" />
         {holes.map((hole, i) =>
           hole.length >= 3 ? (
-            <path key={i} d={ringPath(hole)} fill="none" data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.2" strokeDasharray="4,3" />
+            <path key={i} d={ringPath(hole)} fill="none" data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.2" strokeDasharray="4,3" />
           ) : null
         )}
         {/* Reinforcement nodes (DXF POINT entities) → steel-layer locations. */}
         {nodes.map((n, i) => (
           <circle key={`n${i}`} cx={sx(n.x)} cy={sy(n.depth)} r={3.2}
-            data-role="tensionSteel" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1" />
+ data-fill-role="tensionSteel" data-stroke-role="dotStroke" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1" />
         ))}
       </svg>
     );
