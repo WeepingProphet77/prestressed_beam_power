@@ -89,6 +89,7 @@ export default function StrainDiagram({ results }) {
             cx={margin.left + beamW / 2}
             cy={yScale(lr.depth)}
             r="3"
+            data-fill-role={lr.strain > 0 ? 'tensionSteel' : 'compressionSteel'}
             fill={lr.strain > 0 ? roles.tensionSteel.color : roles.compressionSteel.color}
  data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
             strokeWidth="0.8"
@@ -118,7 +119,7 @@ export default function StrainDiagram({ results }) {
             ${zeroX},${yScale(c)}
             ${zeroX + botStrain * strainScale},${margin.top + plotH}
           `}
-          fill="rgba(255,179,71,0.16)"
+          data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color}
  data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
           strokeWidth="1.3"
         />
@@ -202,6 +203,7 @@ export default function StrainDiagram({ results }) {
                 y1={y}
                 x2={stressLeft + (isTension ? stressW * 0.85 : stressW * 0.35)}
                 y2={y}
+                data-stroke-role={isTension ? 'tensionSteel' : 'compressionSteel'}
                 stroke={isTension ? roles.tensionSteel.color : roles.compressionSteel.color}
                 strokeWidth="2"
                 markerEnd={isTension ? 'url(#arrowGreen)' : 'url(#arrowAmber)'}

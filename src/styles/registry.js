@@ -1,4 +1,5 @@
 import starTrekHolo from './starTrekHolo';
+import goldenRunes from './goldenRunes';
 
 /**
  * The UI Style registry.
@@ -10,7 +11,7 @@ import starTrekHolo from './starTrekHolo';
  *
  * Every entry must satisfy the contract in `styleContract.js`.
  */
-const styles = [starTrekHolo];
+const styles = [starTrekHolo, goldenRunes];
 
 export default styles;
 

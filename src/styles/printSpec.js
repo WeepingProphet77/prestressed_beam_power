@@ -135,6 +135,20 @@ const PRINT_TEXT = {
   'chart-axis-label': '#475569',
 };
 
+/**
+ * The report's own typography.
+ *
+ * Diagram labels take `font-family` from `--mono`, which each style redefines —
+ * Golden Runes uses a serif stack — so left alone the report's labels would
+ * change typeface with the style. Pinning them here keeps the report constant
+ * and matches the Helvetica jsPDF draws the rest of the page in.
+ */
+export const PRINT_FONT = {
+  'font-family': "'Helvetica Neue', Helvetica, Arial, sans-serif",
+  'letter-spacing': 'normal',
+  'font-variant': 'normal',
+};
+
 /** Neutral ink for any label the map does not name. */
 export const PRINT_TEXT_DEFAULT = '#64748b';
 
@@ -153,8 +167,19 @@ export function printTextColor(classAttr) {
   return color;
 }
 
-/** The print spec for a role, or null when the role is unknown. */
-export function printSpecFor(role) {
+/**
+ * The print spec for a role, or null when the role is unknown.
+ *
+ * `series` is a list rather than a single spec, so an index selects from it —
+ * that is how the six stress-strain curves get the report's own palette
+ * instead of the style's.
+ */
+export function printSpecFor(role, index) {
   const spec = PRINT_SPEC[role];
-  return spec && !Array.isArray(spec) ? spec : null;
+  if (Array.isArray(spec)) {
+    if (index === null || index === undefined || index === '') return null;
+    const i = Number(index);
+    return Number.isInteger(i) ? { color: spec[i % spec.length] } : null;
+  }
+  return spec || null;
 }

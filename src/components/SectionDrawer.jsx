@@ -257,7 +257,7 @@ export default function SectionDrawer({ value, onChange }) {
                 />
                 {ring.points.map((p, i) => (
                   <circle key={i} cx={toPx(p.x)} cy={toPx(p.y)} r={i === 0 && !ring.closed ? 5 : 3.5}
-                    fill={i === 0 && !ring.closed ? roles.tensionSteel.color : color} data-stroke-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1" />
+                    data-fill-role="tensionSteel" fill={i === 0 && !ring.closed ? roles.tensionSteel.color : color} data-stroke-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1" />
                 ))}
               </g>
             );

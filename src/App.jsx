@@ -11,6 +11,7 @@ import BiaxialResults from './components/BiaxialResults';
 import { analyzeBeam, analyzeBiaxial, polygonProperties } from './utils/beamCalculations';
 import generatePdfReport from './utils/generatePdfReport';
 import { StyleAmbience } from './styles/StyleProvider';
+import StyleSelector from './styles/StyleSelector';
 import './App.css';
 
 export default function App() {
@@ -119,6 +120,7 @@ export default function App() {
               Flexural strength analysis using the Devalapura&#8211;Tadros / PCI power formula
             </p>
           </div>
+          <StyleSelector />
           {results && results.mode !== 'biaxial' && (
             <button
               type="button"

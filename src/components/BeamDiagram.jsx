@@ -434,6 +434,7 @@ export default function BeamDiagram({ section, results }) {
                 cx={layerCx - 10}
                 cy={ly}
                 r={dotR}
+                data-fill-role={isTension ? 'tensionSteel' : 'compressionSteel'}
                 fill={isTension ? roles.tensionSteel.color : roles.compressionSteel.color}
  data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
                 strokeWidth="1"
@@ -442,6 +443,7 @@ export default function BeamDiagram({ section, results }) {
                 cx={layerCx + 10}
                 cy={ly}
                 r={dotR}
+                data-fill-role={isTension ? 'tensionSteel' : 'compressionSteel'}
                 fill={isTension ? roles.tensionSteel.color : roles.compressionSteel.color}
  data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
                 strokeWidth="1"
@@ -484,8 +486,8 @@ export default function BeamDiagram({ section, results }) {
         </g>
       </svg>
 
-      {/* Decorative instrument ring */}
-      <div className="ring" aria-hidden="true" />
+      {/* Decoration slot — the active style fills it, or leaves it empty */}
+      <div className="panel-deco" aria-hidden="true" />
     </div>
   );
 }

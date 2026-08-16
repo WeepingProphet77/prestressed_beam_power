@@ -90,7 +90,7 @@ export default function InteractionDiagram({ results }) {
           <g>
             <line x1={cx} y1={cy} x2={X(demand.Mux)} y2={Y(demand.Muy)} data-stroke-role="neutralAxis" stroke={roles.neutralAxis.color} strokeWidth="1" strokeDasharray="3,2" />
             <circle cx={X(demand.Mux)} cy={Y(demand.Muy)} r="4.5"
-              fill={demand.pass ? roles.tensionSteel.color : roles.neutralAxis.color} data-stroke-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1.5" />
+              data-fill-role={demand.pass ? 'tensionSteel' : 'neutralAxis'} fill={demand.pass ? roles.tensionSteel.color : roles.neutralAxis.color} data-stroke-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1.5" />
             <text x={X(demand.Mux) + 6} y={Y(demand.Muy) + 4} className="diagram-label" fontSize="9" data-fill-role="neutralAxis" fill={roles.neutralAxis.color}>
               demand
             </text>
