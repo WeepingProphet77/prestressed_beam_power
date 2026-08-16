@@ -48,7 +48,7 @@ export default function StressStrainChart({ results }) {
             y1={margin.top}
             x2={xScale(t)}
             y2={margin.top + plotH}
-            data-role="grid" stroke={roles.grid.color}
+ data-stroke-role="grid" stroke={roles.grid.color}
             strokeWidth="0.5"
           />
         ))}
@@ -59,7 +59,7 @@ export default function StressStrainChart({ results }) {
             y1={yScale(t)}
             x2={margin.left + plotW}
             y2={yScale(t)}
-            data-role="grid" stroke={roles.grid.color}
+ data-stroke-role="grid" stroke={roles.grid.color}
             strokeWidth="0.5"
           />
         ))}
@@ -70,7 +70,7 @@ export default function StressStrainChart({ results }) {
           y1={margin.top + plotH}
           x2={margin.left + plotW}
           y2={margin.top + plotH}
-          data-role="axis" stroke={roles.axis.color}
+ data-stroke-role="axis" stroke={roles.axis.color}
           strokeWidth="1"
         />
         <line
@@ -78,7 +78,7 @@ export default function StressStrainChart({ results }) {
           y1={margin.top}
           x2={margin.left}
           y2={margin.top + plotH}
-          data-role="axis" stroke={roles.axis.color}
+ data-stroke-role="axis" stroke={roles.axis.color}
           strokeWidth="1"
         />
 
@@ -142,7 +142,7 @@ export default function StressStrainChart({ results }) {
             const y = yScale(Math.abs(lr.stress));
             return (
               <g key={idx}>
-                <circle cx={x} cy={y} r="4.5" data-role="tensionSteel" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1.5" />
+                <circle cx={x} cy={y} r="4.5" data-fill-role="tensionSteel" data-stroke-role="dotStroke" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1.5" />
                 <text x={x + 8} y={y - 6} className="chart-point-label">
                   L<tspan baselineShift="sub" fontSize="8">{idx + 1}</tspan>
                 </text>

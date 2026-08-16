@@ -257,7 +257,7 @@ export default function SectionDrawer({ value, onChange }) {
                 />
                 {ring.points.map((p, i) => (
                   <circle key={i} cx={toPx(p.x)} cy={toPx(p.y)} r={i === 0 && !ring.closed ? 5 : 3.5}
-                    fill={i === 0 && !ring.closed ? roles.tensionSteel.color : color} data-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1" />
+                    fill={i === 0 && !ring.closed ? roles.tensionSteel.color : color} data-stroke-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1" />
                 ))}
               </g>
             );
@@ -266,21 +266,21 @@ export default function SectionDrawer({ value, onChange }) {
           {/* Rubber-band from last node to cursor */}
           {lastNode && (
             <line x1={toPx(lastNode.x)} y1={toPx(lastNode.y)} x2={toPx(cursor.x)} y2={toPx(cursor.y)}
-              data-role="concreteStroke" stroke={roles.concreteStroke.color} strokeWidth="1.2" strokeDasharray="4,3" />
+ data-stroke-role="concreteStroke" stroke={roles.concreteStroke.color} strokeWidth="1.2" strokeDasharray="4,3" />
           )}
 
           {/* Cursor crosshair */}
           <g>
             <line x1={toPx(cursor.x) - 8} y1={toPx(cursor.y)} x2={toPx(cursor.x) + 8} y2={toPx(cursor.y)}
-              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.4" />
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.4" />
             <line x1={toPx(cursor.x)} y1={toPx(cursor.y) - 8} x2={toPx(cursor.x)} y2={toPx(cursor.y) + 8}
-              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.4" />
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.4" />
           </g>
 
           {/* Live Δx / Δy readout near the cursor */}
           {lastNode && (
             <text x={toPx(cursor.x) + 10} y={toPx(cursor.y) - 8} className="drawer-delta"
-              fontSize="11" data-role="concreteStroke" fill={roles.concreteStroke.color}>
+              fontSize="11" data-fill-role="concreteStroke" fill={roles.concreteStroke.color}>
               Δx={dx.toFixed(2)}&quot;, Δy={dy.toFixed(2)}&quot;
             </text>
           )}

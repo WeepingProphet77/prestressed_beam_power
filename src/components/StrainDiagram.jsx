@@ -55,8 +55,8 @@ export default function StrainDiagram({ results }) {
           y={margin.top}
           width={beamW}
           height={plotH}
-          data-role="concreteFill" fill={roles.concreteFill.color}
-          data-role="concreteStroke" stroke={roles.concreteStroke.color}
+ data-fill-role="concreteFill" fill={roles.concreteFill.color}
+ data-stroke-role="concreteStroke" stroke={roles.concreteStroke.color}
           strokeWidth="1.5"
         />
 
@@ -66,8 +66,8 @@ export default function StrainDiagram({ results }) {
           y={margin.top}
           width={beamW}
           height={(a / h) * plotH}
-          data-role="stressBlockFill" fill={roles.stressBlockFill.color}
-          data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
+ data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color}
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
           strokeWidth="1"
         />
 
@@ -77,7 +77,7 @@ export default function StrainDiagram({ results }) {
           y1={yScale(c)}
           x2={margin.left + beamW}
           y2={yScale(c)}
-          data-role="neutralAxis" stroke={roles.neutralAxis.color}
+ data-stroke-role="neutralAxis" stroke={roles.neutralAxis.color}
           strokeWidth="1.5"
           strokeDasharray="4,2"
         />
@@ -90,7 +90,7 @@ export default function StrainDiagram({ results }) {
             cy={yScale(lr.depth)}
             r="3"
             fill={lr.strain > 0 ? roles.tensionSteel.color : roles.compressionSteel.color}
-            data-role="dotStroke" stroke={roles.dotStroke.color}
+ data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
             strokeWidth="0.8"
           />
         ))}
@@ -106,7 +106,7 @@ export default function StrainDiagram({ results }) {
           y1={margin.top}
           x2={zeroX}
           y2={margin.top + plotH}
-          data-role="axis" stroke={roles.axis.color}
+ data-stroke-role="axis" stroke={roles.axis.color}
           strokeWidth="0.8"
           strokeDasharray="3,2"
         />
@@ -119,7 +119,7 @@ export default function StrainDiagram({ results }) {
             ${zeroX + botStrain * strainScale},${margin.top + plotH}
           `}
           fill="rgba(255,179,71,0.16)"
-          data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
           strokeWidth="1.3"
         />
 
@@ -142,8 +142,8 @@ export default function StrainDiagram({ results }) {
           const x = zeroX + lr.strain * strainScale;
           return (
             <g key={i}>
-              <circle cx={x} cy={y} r="3" data-role="tensionSteel" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1" />
-              <line x1={zeroX} y1={y} x2={x} y2={y} data-role="tensionSteel" stroke={roles.tensionSteel.color} strokeWidth="0.8" strokeDasharray="2,2" />
+              <circle cx={x} cy={y} r="3" data-fill-role="tensionSteel" data-stroke-role="dotStroke" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1" />
+              <line x1={zeroX} y1={y} x2={x} y2={y} data-stroke-role="tensionSteel" stroke={roles.tensionSteel.color} strokeWidth="0.8" strokeDasharray="2,2" />
             </g>
           );
         })}
@@ -159,8 +159,8 @@ export default function StrainDiagram({ results }) {
           y={margin.top}
           width={stressW * 0.7}
           height={(a / h) * plotH}
-          data-role="stressBlockFill" fill={roles.stressBlockFill.color}
-          data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
+ data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color}
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
           strokeWidth="1.3"
         />
         <text
@@ -178,7 +178,7 @@ export default function StrainDiagram({ results }) {
             y1={yScale(ccCentroid)}
             x2={stressLeft + stressW * 0.35}
             y2={yScale(ccCentroid)}
-            data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
+ data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
             strokeWidth="1.8"
             markerEnd="url(#arrowBlue)"
           />
@@ -220,13 +220,13 @@ export default function StrainDiagram({ results }) {
         {/* Arrow markers */}
         <defs>
           <marker id="arrowBlue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6" data-role="stressBlockStroke" fill={roles.stressBlockStroke.color} />
+            <path d="M0,0 L6,3 L0,6" data-fill-role="stressBlockStroke" fill={roles.stressBlockStroke.color} />
           </marker>
           <marker id="arrowGreen" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6" data-role="tensionSteel" fill={roles.tensionSteel.color} />
+            <path d="M0,0 L6,3 L0,6" data-fill-role="tensionSteel" fill={roles.tensionSteel.color} />
           </marker>
           <marker id="arrowAmber" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6" data-role="compressionSteel" fill={roles.compressionSteel.color} />
+            <path d="M0,0 L6,3 L0,6" data-fill-role="compressionSteel" fill={roles.compressionSteel.color} />
           </marker>
         </defs>
       </svg>
