@@ -89,7 +89,7 @@ describe('token graph', () => {
 
 describe('every style supplies the token contract', () => {
   /* A style that omits these renders the app unstyled rather than restyled. */
-  const REQUIRED = ['--cy-rgb', '--am-rgb', '--vi-rgb', '--ok-rgb', '--bad-rgb', '--ink-rgb', '--density'];
+  const REQUIRED = ['--accent-1-rgb', '--accent-2-rgb', '--accent-3-rgb', '--success-rgb', '--danger-rgb', '--ink-rgb', '--density'];
 
   for (const [i, css] of styleSheets().entries()) {
     it(`style sheet #${i + 1} defines the required tokens and density scale`, () => {
