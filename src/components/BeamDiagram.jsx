@@ -450,7 +450,7 @@ export default function BeamDiagram({ section, results }) {
               />
               {/* Label */}
               <text x={annotX} y={ly + 4} className="diagram-label steel-label">
-                d={lr.depth.toFixed(2)}&quot; | f<tspan baselineShift="sub" fontSize="8">s</tspan>={lr.stress.toFixed(1)} ksi
+                d={lr.depth.toFixed(2)}&quot; | f<tspan baselineShift="sub" fontSize="10">s</tspan>={lr.stress.toFixed(1)} ksi
               </text>
             </g>
           );

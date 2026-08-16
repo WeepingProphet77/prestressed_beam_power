@@ -89,7 +89,7 @@ export default function StressStrainChart({ results }) {
           textAnchor="middle"
           className="chart-axis-label"
         >
-          Strain, &#949;<tspan baselineShift="sub" fontSize="9">s</tspan>
+          Strain, &#949;<tspan baselineShift="sub" fontSize="11">s</tspan>
         </text>
         <text
           x={14}
@@ -98,7 +98,7 @@ export default function StressStrainChart({ results }) {
           className="chart-axis-label"
           transform={`rotate(-90, 14, ${margin.top + plotH / 2})`}
         >
-          Stress, f<tspan baselineShift="sub" fontSize="9">s</tspan> (ksi)
+          Stress, f<tspan baselineShift="sub" fontSize="11">s</tspan> (ksi)
         </text>
 
         {/* Tick labels */}
@@ -146,7 +146,7 @@ export default function StressStrainChart({ results }) {
               <g key={idx}>
                 <circle cx={x} cy={y} r="4.5" data-fill-role="tensionSteel" data-stroke-role="dotStroke" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1.5" />
                 <text x={x + 8} y={y - 6} className="chart-point-label">
-                  L<tspan baselineShift="sub" fontSize="8">{idx + 1}</tspan>
+                  L<tspan baselineShift="sub" fontSize="10">{idx + 1}</tspan>
                 </text>
               </g>
             );
