@@ -11,73 +11,81 @@
 }
 
 :root {
-  /* ── Holographic HUD palette ── */
-  --cy: #7fe8ff;              /* primary hologram cyan */
-  --cy-dim: #3d92a8;          /* muted cyan for secondary text */
-  --cy-bright: #dffaff;       /* near-white cyan for readouts */
-  --am: #ffb347;              /* amber accent */
-  --am-dim: #b4783a;
-  --vi: #b78bff;              /* violet accent */
-  --ok: #5cffc0;              /* pass / tension */
-  --bad: #ff6b7a;             /* fail */
-  --ink: #04121a;             /* deep ink for text on bright fills */
+  /* ══ Base palette, stored as RGB triplets ══
+     Components rather than hex, so tints compose as
+     `rgba(var(--cy-rgb), 0.3)` without hardcoding the color. A UI style
+     overrides the triplet and every derived tint follows it. Nothing outside
+     this block should contain a raw color value.
+     Keep in sync with src/theme.js, which mirrors these for SVG. */
 
-  --panel: rgba(10, 40, 58, 0.34);
-  --panel-solid: #06202e;
-  --panel-deep: rgba(0, 30, 45, 0.6);
-  --line: rgba(127, 232, 255, 0.3);
-  --line-soft: rgba(127, 232, 255, 0.14);
-  --glow: 0 0 6px rgba(127, 232, 255, 0.55);
-  --glow-strong: 0 0 18px rgba(127, 232, 255, 0.75);
+  /* Hologram cyan */
+  --cy-rgb: 127, 232, 255;
+  --cy-dim-rgb: 61, 146, 168;
+  --cy-bright-rgb: 223, 250, 255;
+  --cy-hi-rgb: 79, 216, 245;
+  --cy-max-rgb: 234, 252, 255;
+  /* Accents */
+  --am-rgb: 255, 179, 71;
+  --am-dim-rgb: 180, 120, 58;
+  --vi-rgb: 183, 139, 255;
+  --vi-hi-rgb: 232, 220, 255;
+  --ok-rgb: 92, 255, 192;
+  --bad-rgb: 255, 107, 122;
+  --bad-hi-rgb: 255, 179, 188;
+  /* Neutrals and surfaces */
+  --ink-rgb: 4, 18, 26;
+  --white-rgb: 255, 255, 255;
+  --panel-base-rgb: 10, 40, 58;
+  --panel-solid-rgb: 6, 32, 46;
+  --surface-rgb: 0, 40, 60;
+  --surface-alt-rgb: 0, 30, 45;
+  --surface-deep-rgb: 0, 20, 32;
+  --surface-focus-rgb: 0, 60, 85;
+  --void-rgb: 1, 8, 13;
+  --shadow-rgb: 0, 0, 0;
+  /* Signal grounds and ambient auras */
+  --alert-rgb: 70, 10, 20;
+  --alert-pulse-rgb: 110, 16, 30;
+  --warn-ground-rgb: 70, 48, 10;
+  --sheen-rgb: 20, 120, 160;
+  --aura-teal-rgb: 24, 96, 128;
+  --aura-violet-rgb: 90, 50, 140;
+
+  /* ══ Solid forms ══ */
+  --cy: rgb(var(--cy-rgb));               /* primary hologram cyan */
+  --cy-dim: rgb(var(--cy-dim-rgb));       /* muted cyan for secondary text */
+  --cy-bright: rgb(var(--cy-bright-rgb)); /* near-white cyan for readouts */
+  --cy-hi: rgb(var(--cy-hi-rgb));         /* gradient partner for buttons */
+  --cy-max: rgb(var(--cy-max-rgb));       /* hero readout */
+  --am: rgb(var(--am-rgb));               /* amber accent */
+  --am-dim: rgb(var(--am-dim-rgb));
+  --vi: rgb(var(--vi-rgb));               /* violet accent */
+  --vi-hi: rgb(var(--vi-hi-rgb));
+  --ok: rgb(var(--ok-rgb));               /* pass / tension */
+  --bad: rgb(var(--bad-rgb));             /* fail */
+  --bad-hi: rgb(var(--bad-hi-rgb));
+  --ink: rgb(var(--ink-rgb));             /* deep ink for text on bright fills */
+  --white: rgb(var(--white-rgb));
+  --void-solid: rgb(var(--void-rgb));
+  --shadow-solid: rgb(var(--shadow-rgb));
+
+  --panel: rgba(var(--panel-base-rgb), 0.34);
+  --panel-solid: rgb(var(--panel-solid-rgb));
+  --panel-deep: rgba(var(--surface-alt-rgb), 0.6);
+  --line: rgba(var(--cy-rgb), 0.3);
+  --line-soft: rgba(var(--cy-rgb), 0.14);
+  --glow: 0 0 6px rgba(var(--cy-rgb), 0.55);
+  --glow-strong: 0 0 18px rgba(var(--cy-rgb), 0.75);
 
   --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
-
-  /* ── Legacy aliases ──
-     Older rules and inline SVG fills still reference these names; they are
-     remapped onto the HUD palette so nothing falls back to a light theme. */
-  --blue-50: rgba(127, 232, 255, 0.08);
-  --blue-100: rgba(127, 232, 255, 0.14);
-  --blue-200: rgba(127, 232, 255, 0.3);
-  --blue-300: var(--cy-dim);
-  --blue-500: var(--cy);
-  --blue-600: var(--cy);
-  --blue-700: var(--cy-bright);
-  --blue-800: #0b3346;
-  --blue-900: #04121a;
-
-  --slate-50: rgba(0, 30, 45, 0.5);
-  --slate-100: rgba(127, 232, 255, 0.08);
-  --slate-200: var(--line);
-  --slate-300: var(--cy-dim);
-  --slate-400: var(--cy-dim);
-  --slate-500: var(--cy-dim);
-  --slate-600: var(--cy);
-  --slate-700: var(--cy);
-  --slate-800: var(--cy-bright);
-  --slate-900: #01080d;
-
-  --green-50: rgba(92, 255, 192, 0.1);
-  --green-100: rgba(92, 255, 192, 0.18);
-  --green-500: var(--ok);
-  --green-700: var(--ok);
-
-  --amber-50: rgba(255, 179, 71, 0.1);
-  --amber-100: rgba(255, 179, 71, 0.18);
-  --amber-500: var(--am);
-  --amber-700: var(--am);
-
-  --red-50: rgba(255, 107, 122, 0.1);
-  --red-100: rgba(255, 107, 122, 0.18);
-  --red-500: var(--bad);
-  --red-700: var(--bad);
 
   --radius: 0px;
   --radius-sm: 0px;
   --radius-xs: 0px;
-  --shadow-sm: 0 0 10px rgba(0, 0, 0, 0.4);
-  --shadow: 0 0 14px rgba(0, 0, 0, 0.45);
-  --shadow-md: inset 0 0 40px rgba(20, 120, 160, 0.1), 0 0 22px rgba(0, 0, 0, 0.5);
-  --shadow-lg: inset 0 0 50px rgba(20, 120, 160, 0.14), 0 0 30px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 0 10px rgba(var(--shadow-rgb), 0.4);
+  --shadow: 0 0 14px rgba(var(--shadow-rgb), 0.45);
+  --shadow-md: inset 0 0 40px rgba(var(--sheen-rgb), 0.1), 0 0 22px rgba(var(--shadow-rgb), 0.5);
+  --shadow-lg: inset 0 0 50px rgba(var(--sheen-rgb), 0.14), 0 0 30px rgba(var(--shadow-rgb), 0.6);
 
   font-family: var(--mono);
   font-size: 13px;
@@ -98,9 +106,9 @@ body {
   flex-direction: column;
   overflow-x: hidden;
   background:
-    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(24, 96, 128, 0.4), transparent 60%),
-    radial-gradient(ellipse 90% 70% at 90% 110%, rgba(90, 50, 140, 0.28), transparent 60%),
-    #01080d;
+    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(var(--aura-teal-rgb), 0.4), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 90% 110%, rgba(var(--aura-violet-rgb), 0.28), transparent 60%),
+    var(--void-solid);
   background-attachment: fixed;
   color: var(--cy);
 }
@@ -113,11 +121,11 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background-image:
-    linear-gradient(rgba(127, 232, 255, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(127, 232, 255, 0.055) 1px, transparent 1px);
+    linear-gradient(rgba(var(--cy-rgb), 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--cy-rgb), 0.055) 1px, transparent 1px);
   background-size: 44px 44px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--shadow-solid) 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--shadow-solid) 30%, transparent 100%);
 }
 
 /* ── Ambient layer: CRT scanlines ── */
@@ -127,7 +135,7 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 99;
-  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px);
+  background: repeating-linear-gradient(0deg, rgba(var(--shadow-rgb), 0.22) 0 1px, transparent 1px 3px);
   mix-blend-mode: multiply;
 }
 
@@ -142,8 +150,8 @@ body::after {
   background: linear-gradient(
     180deg,
     transparent,
-    rgba(127, 232, 255, 0.07) 45%,
-    rgba(127, 232, 255, 0.13) 50%,
+    rgba(var(--cy-rgb), 0.07) 45%,
+    rgba(var(--cy-rgb), 0.13) 50%,
     transparent
   );
   animation: sweep 7s linear infinite;
@@ -186,13 +194,13 @@ select {
 }
 
 ::selection {
-  background: rgba(127, 232, 255, 0.3);
+  background: rgba(var(--cy-rgb), 0.3);
   color: var(--cy-bright);
 }
 
 /* Scrollbars tuned to the HUD */
 * {
-  scrollbar-color: rgba(127, 232, 255, 0.35) transparent;
+  scrollbar-color: rgba(var(--cy-rgb), 0.35) transparent;
   scrollbar-width: thin;
 }
 
@@ -202,16 +210,16 @@ select {
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(0, 30, 45, 0.5);
+  background: rgba(var(--surface-alt-rgb), 0.5);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(127, 232, 255, 0.28);
+  background: rgba(var(--cy-rgb), 0.28);
   border: 1px solid var(--line);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(127, 232, 255, 0.45);
+  background: rgba(var(--cy-rgb), 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {
