@@ -57,6 +57,24 @@ describe('CSS color tokens', () => {
     expect(selfRefs, `circular tokens: ${selfRefs.join(', ')}`).toEqual([]);
   });
 
+  it('App.css uses no raw spacing values — padding/margin/gap come from the scale', () => {
+    const found = [
+      ...read('App.css').matchAll(
+        /\b(padding|margin|gap|row-gap|column-gap)(-top|-right|-bottom|-left)?:\s*([^;]*\d+px[^;]*);/g
+      ),
+    ].map((m) => `${m[1]}${m[2] || ''}: ${m[3]}`);
+    expect(found, `raw spacing: ${found.join(' | ')}`).toEqual([]);
+  });
+
+  it('the density scale is defined and scales with --density', () => {
+    const index = read('index.css');
+    expect(index).toMatch(/--density:\s*1\s*;/);
+    for (let i = 1; i <= 7; i++) {
+      const decl = new RegExp(`--space-${i}:\\s*calc\\([\\d.]+px \\* var\\(--density\\)\\)`);
+      expect(index, `--space-${i} must scale with --density`).toMatch(decl);
+    }
+  });
+
   it('each --*-rgb token holds a bare triplet, so rgba() can compose it', () => {
     const bad = [...read('index.css').matchAll(/^\s*(--[\w-]+-rgb):\s*([^;]+);/gm)]
       .filter(([, , value]) => !/^\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*$/.test(value))

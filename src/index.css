@@ -79,6 +79,23 @@
 
   --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
+  /* ══ Density scale ══
+     Every padding, margin and gap in App.css comes from these seven steps.
+     The step values are fitted to this style's own rhythm rather than a
+     generic 4px grid, which keeps the layout it was designed with.
+
+     A UI style changes the app's whole rhythm by setting --density — 0.85
+     reads compact, 1.2 reads airy — or overrides individual steps for full
+     control. Nothing outside this block should contain a raw spacing value. */
+  --density: 1;
+  --space-1: calc(2px * var(--density));
+  --space-2: calc(5px * var(--density));
+  --space-3: calc(8px * var(--density));
+  --space-4: calc(11px * var(--density));
+  --space-5: calc(14px * var(--density));
+  --space-6: calc(16px * var(--density));
+  --space-7: calc(22px * var(--density));
+
   --radius: 0px;
   --radius-sm: 0px;
   --radius-xs: 0px;
