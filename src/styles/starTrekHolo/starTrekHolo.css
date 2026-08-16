@@ -101,7 +101,25 @@
 
   --font: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
-    /* ══ Density scale ══
+    /* ══ Tracking scale ══
+     Letterspacing steps. The old range topped out at 0.3em on 9px uppercase
+     text, which is where it stopped being readable; the wide end now caps at
+     0.18em. Tight values are unchanged — this compresses the top, it does not
+     flatten the tracking out.
+
+     --tracking-scale lets a style dial the whole thing: a serif needs far less
+     tracking than a condensed monospace to read as deliberate. Tracking never
+     reaches the PDF, which pins it to normal. */
+  --tracking-scale: 1;
+  --tracking-1: calc(0.02em * var(--tracking-scale));
+  --tracking-2: calc(0.04em * var(--tracking-scale));
+  --tracking-3: calc(0.06em * var(--tracking-scale));
+  --tracking-4: calc(0.09em * var(--tracking-scale));
+  --tracking-5: calc(0.12em * var(--tracking-scale));
+  --tracking-6: calc(0.15em * var(--tracking-scale));
+  --tracking-7: calc(0.18em * var(--tracking-scale));
+
+  /* ══ Density scale ══
        Every padding, margin and gap in App.css comes from these seven steps.
        The step values are fitted to this style's own rhythm rather than a
        generic 4px grid, which keeps the layout it was designed with.

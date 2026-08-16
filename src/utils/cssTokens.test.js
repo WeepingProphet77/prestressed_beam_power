@@ -81,6 +81,18 @@ describe('base layer owns no concrete values', () => {
     }
   });
 
+  it('App.css sets no raw letter-spacing — tracking comes from the scale', () => {
+    const found = read('App.css').match(/letter-spacing:\s*[\d.]+em/g) || [];
+    expect(found, `raw tracking: ${found.join(', ')}`).toEqual([]);
+  });
+
+  it('the tracking scale caps where small uppercase text stops reading', () => {
+    const css = styleSheets().join('\n');
+    const steps = [...css.matchAll(/--tracking-\d:\s*calc\(([\d.]+)em/g)].map((m) => Number(m[1]));
+    expect(steps.length).toBeGreaterThan(0);
+    expect(Math.max(...steps), 'tracking exceeds 0.18em').toBeLessThanOrEqual(0.18);
+  });
+
   it('the base layer defines no palette or spacing tokens — styles do', () => {
     const owned = BASE_LAYER.flatMap((f) =>
       [...read(f).matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1])

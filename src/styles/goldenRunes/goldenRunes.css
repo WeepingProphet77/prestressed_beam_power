@@ -99,6 +99,24 @@
   --font: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
     'Hoefler Text', Georgia, 'Times New Roman', serif;
 
+  /* ══ Tracking scale ══
+     Letterspacing steps. The old range topped out at 0.3em on 9px uppercase
+     text, which is where it stopped being readable; the wide end now caps at
+     0.18em. Tight values are unchanged — this compresses the top, it does not
+     flatten the tracking out.
+
+     --tracking-scale dials the whole thing per style. This one is 0.8: a serif
+     needs less tracking than a condensed monospace to read as deliberate.
+     Tracking never reaches the PDF, which pins it to normal. */
+  --tracking-scale: 0.8;
+  --tracking-1: calc(0.02em * var(--tracking-scale));
+  --tracking-2: calc(0.04em * var(--tracking-scale));
+  --tracking-3: calc(0.06em * var(--tracking-scale));
+  --tracking-4: calc(0.09em * var(--tracking-scale));
+  --tracking-5: calc(0.12em * var(--tracking-scale));
+  --tracking-6: calc(0.15em * var(--tracking-scale));
+  --tracking-7: calc(0.18em * var(--tracking-scale));
+
   /* Airier than the HUD — this style wants room around things. */
   --density: 1.12;
   --space-1: calc(2px * var(--density));
@@ -124,20 +142,19 @@
   color-scheme: dark;
 }
 
+/* Small caps suit the serif; tracking itself comes from --tracking-scale. */
 [data-ui-style='golden-runes'] .header-text h1,
 [data-ui-style='golden-runes'] .form-section h3,
 [data-ui-style='golden-runes'] .results-panel h3,
 [data-ui-style='golden-runes'] .beam-diagram h3,
 [data-ui-style='golden-runes'] .strain-diagram h3,
 [data-ui-style='golden-runes'] .stress-strain-chart h3 {
-  letter-spacing: 0.1em;
   text-transform: uppercase;
   font-variant: small-caps;
 }
 
 [data-ui-style='golden-runes'] .header-text .subtitle,
 [data-ui-style='golden-runes'] .app-footer {
-  letter-spacing: 0.08em;
   text-transform: none;
 }
 
