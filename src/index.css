@@ -11,99 +11,6 @@
 }
 
 :root {
-  /* ══ Base palette, stored as RGB triplets ══
-     Components rather than hex, so tints compose as
-     `rgba(var(--cy-rgb), 0.3)` without hardcoding the color. A UI style
-     overrides the triplet and every derived tint follows it. Nothing outside
-     this block should contain a raw color value.
-     Keep in sync with src/theme.js, which mirrors these for SVG. */
-
-  /* Hologram cyan */
-  --cy-rgb: 127, 232, 255;
-  --cy-dim-rgb: 61, 146, 168;
-  --cy-bright-rgb: 223, 250, 255;
-  --cy-hi-rgb: 79, 216, 245;
-  --cy-max-rgb: 234, 252, 255;
-  /* Accents */
-  --am-rgb: 255, 179, 71;
-  --am-dim-rgb: 180, 120, 58;
-  --vi-rgb: 183, 139, 255;
-  --vi-hi-rgb: 232, 220, 255;
-  --ok-rgb: 92, 255, 192;
-  --bad-rgb: 255, 107, 122;
-  --bad-hi-rgb: 255, 179, 188;
-  /* Neutrals and surfaces */
-  --ink-rgb: 4, 18, 26;
-  --white-rgb: 255, 255, 255;
-  --panel-base-rgb: 10, 40, 58;
-  --panel-solid-rgb: 6, 32, 46;
-  --surface-rgb: 0, 40, 60;
-  --surface-alt-rgb: 0, 30, 45;
-  --surface-deep-rgb: 0, 20, 32;
-  --surface-focus-rgb: 0, 60, 85;
-  --void-rgb: 1, 8, 13;
-  --shadow-rgb: 0, 0, 0;
-  /* Signal grounds and ambient auras */
-  --alert-rgb: 70, 10, 20;
-  --alert-pulse-rgb: 110, 16, 30;
-  --warn-ground-rgb: 70, 48, 10;
-  --sheen-rgb: 20, 120, 160;
-  --aura-teal-rgb: 24, 96, 128;
-  --aura-violet-rgb: 90, 50, 140;
-
-  /* ══ Solid forms ══ */
-  --cy: rgb(var(--cy-rgb));               /* primary hologram cyan */
-  --cy-dim: rgb(var(--cy-dim-rgb));       /* muted cyan for secondary text */
-  --cy-bright: rgb(var(--cy-bright-rgb)); /* near-white cyan for readouts */
-  --cy-hi: rgb(var(--cy-hi-rgb));         /* gradient partner for buttons */
-  --cy-max: rgb(var(--cy-max-rgb));       /* hero readout */
-  --am: rgb(var(--am-rgb));               /* amber accent */
-  --am-dim: rgb(var(--am-dim-rgb));
-  --vi: rgb(var(--vi-rgb));               /* violet accent */
-  --vi-hi: rgb(var(--vi-hi-rgb));
-  --ok: rgb(var(--ok-rgb));               /* pass / tension */
-  --bad: rgb(var(--bad-rgb));             /* fail */
-  --bad-hi: rgb(var(--bad-hi-rgb));
-  --ink: rgb(var(--ink-rgb));             /* deep ink for text on bright fills */
-  --white: rgb(var(--white-rgb));
-  --void-solid: rgb(var(--void-rgb));
-  --shadow-solid: rgb(var(--shadow-rgb));
-
-  --panel: rgba(var(--panel-base-rgb), 0.34);
-  --panel-solid: rgb(var(--panel-solid-rgb));
-  --panel-deep: rgba(var(--surface-alt-rgb), 0.6);
-  --line: rgba(var(--cy-rgb), 0.3);
-  --line-soft: rgba(var(--cy-rgb), 0.14);
-  --glow: 0 0 6px rgba(var(--cy-rgb), 0.55);
-  --glow-strong: 0 0 18px rgba(var(--cy-rgb), 0.75);
-
-  --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
-
-  /* ══ Density scale ══
-     Every padding, margin and gap in App.css comes from these seven steps.
-     The step values are fitted to this style's own rhythm rather than a
-     generic 4px grid, which keeps the layout it was designed with.
-
-     A UI style changes the app's whole rhythm by setting --density — 0.85
-     reads compact, 1.2 reads airy — or overrides individual steps for full
-     control. Nothing outside this block should contain a raw spacing value. */
-  --density: 1;
-  --space-1: calc(2px * var(--density));
-  --space-2: calc(5px * var(--density));
-  --space-3: calc(8px * var(--density));
-  --space-4: calc(11px * var(--density));
-  --space-5: calc(14px * var(--density));
-  --space-6: calc(16px * var(--density));
-  --space-7: calc(22px * var(--density));
-
-  --radius: 0px;
-  --radius-sm: 0px;
-  --radius-xs: 0px;
-  --shadow-sm: 0 0 10px rgba(var(--shadow-rgb), 0.4);
-  --shadow: 0 0 14px rgba(var(--shadow-rgb), 0.45);
-  --shadow-md: inset 0 0 40px rgba(var(--sheen-rgb), 0.1), 0 0 22px rgba(var(--shadow-rgb), 0.5);
-  --shadow-lg: inset 0 0 50px rgba(var(--sheen-rgb), 0.14), 0 0 30px rgba(var(--shadow-rgb), 0.6);
-
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.55;
@@ -130,55 +37,6 @@ body {
   color: var(--cy);
 }
 
-/* ── Ambient layer: fine engineering grid ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image:
-    linear-gradient(rgba(var(--cy-rgb), 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--cy-rgb), 0.055) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--shadow-solid) 30%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--shadow-solid) 30%, transparent 100%);
-}
-
-/* ── Ambient layer: CRT scanlines ── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 99;
-  background: repeating-linear-gradient(0deg, rgba(var(--shadow-rgb), 0.22) 0 1px, transparent 1px 3px);
-  mix-blend-mode: multiply;
-}
-
-/* ── Ambient layer: travelling scan sweep ── */
-.sweep {
-  position: fixed;
-  left: 0;
-  right: 0;
-  height: 150px;
-  z-index: 98;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgba(var(--cy-rgb), 0.07) 45%,
-    rgba(var(--cy-rgb), 0.13) 50%,
-    transparent
-  );
-  animation: sweep 7s linear infinite;
-}
-
-@keyframes sweep {
-  from { top: -160px; }
-  to   { top: 100%; }
-}
-
 #root {
   position: relative;
   z-index: 2;
@@ -202,12 +60,6 @@ select,
 textarea {
   font-family: inherit;
   font-size: 12.5px;
-}
-
-/* Dark-native form controls: keep native pickers (date, select arrow) legible */
-input,
-select {
-  color-scheme: dark;
 }
 
 ::selection {
@@ -240,11 +92,6 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sweep {
-    animation: none;
-    display: none;
-  }
-
   *,
   *::before,
   *::after {

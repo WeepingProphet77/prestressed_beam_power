@@ -10,6 +10,7 @@ import InteractionDiagram from './components/InteractionDiagram';
 import BiaxialResults from './components/BiaxialResults';
 import { analyzeBeam, analyzeBiaxial, polygonProperties } from './utils/beamCalculations';
 import generatePdfReport from './utils/generatePdfReport';
+import { StyleAmbience } from './styles/StyleProvider';
 import './App.css';
 
 export default function App() {
@@ -106,8 +107,8 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Ambient scan sweep — decorative HUD layer */}
-      <div className="sweep" aria-hidden="true" />
+      {/* Whatever ambient layers the active style brings, if any */}
+      <StyleAmbience />
 
       <header className="app-header">
         <div className="header-content">

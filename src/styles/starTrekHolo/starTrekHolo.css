@@ -1,0 +1,273 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Star Trek Holo — tokens, ornament, and ambience
+   ══════════════════════════════════════════════════════════════════════════
+
+   Everything that makes this style look the way it does lives here. The base
+   layer (index.css, App.css) defines structure and consumes tokens; it draws
+   no ornament of its own, so another style is free to use the panel and
+   header pseudo-elements however it likes.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[data-ui-style='star-trek-holo'] {
+    /* ══ Base palette, stored as RGB triplets ══
+       Components rather than hex, so tints compose as
+       `rgba(var(--cy-rgb), 0.3)` without hardcoding the color. A UI style
+       overrides the triplet and every derived tint follows it. Nothing outside
+       this block should contain a raw color value.
+       Keep in sync with src/theme.js, which mirrors these for SVG. */
+
+    /* Hologram cyan */
+    --cy-rgb: 127, 232, 255;
+    --cy-dim-rgb: 61, 146, 168;
+    --cy-bright-rgb: 223, 250, 255;
+    --cy-hi-rgb: 79, 216, 245;
+    --cy-max-rgb: 234, 252, 255;
+    /* Accents */
+    --am-rgb: 255, 179, 71;
+    --am-dim-rgb: 180, 120, 58;
+    --vi-rgb: 183, 139, 255;
+    --vi-hi-rgb: 232, 220, 255;
+    --ok-rgb: 92, 255, 192;
+    --bad-rgb: 255, 107, 122;
+    --bad-hi-rgb: 255, 179, 188;
+    /* Neutrals and surfaces */
+    --ink-rgb: 4, 18, 26;
+    --white-rgb: 255, 255, 255;
+    --panel-base-rgb: 10, 40, 58;
+    --panel-solid-rgb: 6, 32, 46;
+    --surface-rgb: 0, 40, 60;
+    --surface-alt-rgb: 0, 30, 45;
+    --surface-deep-rgb: 0, 20, 32;
+    --surface-focus-rgb: 0, 60, 85;
+    --void-rgb: 1, 8, 13;
+    --shadow-rgb: 0, 0, 0;
+    /* Signal grounds and ambient auras */
+    --alert-rgb: 70, 10, 20;
+    --alert-pulse-rgb: 110, 16, 30;
+    --warn-ground-rgb: 70, 48, 10;
+    --sheen-rgb: 20, 120, 160;
+    --aura-teal-rgb: 24, 96, 128;
+    --aura-violet-rgb: 90, 50, 140;
+
+    /* ══ Solid forms ══ */
+    --cy: rgb(var(--cy-rgb));               /* primary hologram cyan */
+    --cy-dim: rgb(var(--cy-dim-rgb));       /* muted cyan for secondary text */
+    --cy-bright: rgb(var(--cy-bright-rgb)); /* near-white cyan for readouts */
+    --cy-hi: rgb(var(--cy-hi-rgb));         /* gradient partner for buttons */
+    --cy-max: rgb(var(--cy-max-rgb));       /* hero readout */
+    --am: rgb(var(--am-rgb));               /* amber accent */
+    --am-dim: rgb(var(--am-dim-rgb));
+    --vi: rgb(var(--vi-rgb));               /* violet accent */
+    --vi-hi: rgb(var(--vi-hi-rgb));
+    --ok: rgb(var(--ok-rgb));               /* pass / tension */
+    --bad: rgb(var(--bad-rgb));             /* fail */
+    --bad-hi: rgb(var(--bad-hi-rgb));
+    --ink: rgb(var(--ink-rgb));             /* deep ink for text on bright fills */
+    --white: rgb(var(--white-rgb));
+    --void-solid: rgb(var(--void-rgb));
+    --shadow-solid: rgb(var(--shadow-rgb));
+
+    --panel: rgba(var(--panel-base-rgb), 0.34);
+    --panel-solid: rgb(var(--panel-solid-rgb));
+    --panel-deep: rgba(var(--surface-alt-rgb), 0.6);
+    --line: rgba(var(--cy-rgb), 0.3);
+    --line-soft: rgba(var(--cy-rgb), 0.14);
+    --glow: 0 0 6px rgba(var(--cy-rgb), 0.55);
+    --glow-strong: 0 0 18px rgba(var(--cy-rgb), 0.75);
+
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+
+    /* ══ Density scale ══
+       Every padding, margin and gap in App.css comes from these seven steps.
+       The step values are fitted to this style's own rhythm rather than a
+       generic 4px grid, which keeps the layout it was designed with.
+
+       A UI style changes the app's whole rhythm by setting --density — 0.85
+       reads compact, 1.2 reads airy — or overrides individual steps for full
+       control. Nothing outside this block should contain a raw spacing value. */
+    --density: 1;
+    --space-1: calc(2px * var(--density));
+    --space-2: calc(5px * var(--density));
+    --space-3: calc(8px * var(--density));
+    --space-4: calc(11px * var(--density));
+    --space-5: calc(14px * var(--density));
+    --space-6: calc(16px * var(--density));
+    --space-7: calc(22px * var(--density));
+
+    --radius: 0px;
+    --radius-sm: 0px;
+    --radius-xs: 0px;
+    --shadow-sm: 0 0 10px rgba(var(--shadow-rgb), 0.4);
+    --shadow: 0 0 14px rgba(var(--shadow-rgb), 0.45);
+    --shadow-md: inset 0 0 40px rgba(var(--sheen-rgb), 0.1), 0 0 22px rgba(var(--shadow-rgb), 0.5);
+    --shadow-lg: inset 0 0 50px rgba(var(--sheen-rgb), 0.14), 0 0 30px rgba(var(--shadow-rgb), 0.6);
+}
+
+/* Native form controls (date picker, select arrow) follow the style. */
+[data-ui-style='star-trek-holo'] input,
+[data-ui-style='star-trek-holo'] select {
+  color-scheme: dark;
+}
+
+/* ══ Ambience ══ rendered by this style's <Ambience /> into the shell's
+   fixed, non-interactive layer. */
+
+.sth-grid,
+.sth-scanlines,
+.sth-sweep {
+  position: fixed;
+  pointer-events: none;
+}
+
+/* ── Ambient layer: fine engineering grid ── */
+.sth-grid {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(var(--cy-rgb), 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--cy-rgb), 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--shadow-solid) 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--shadow-solid) 30%, transparent 100%);
+}
+
+/* ── Ambient layer: CRT scanlines ── */
+.sth-scanlines {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background: repeating-linear-gradient(0deg, rgba(var(--shadow-rgb), 0.22) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+/* ── Ambient layer: travelling scan sweep ── */
+.sth-sweep {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 150px;
+  z-index: 98;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(var(--cy-rgb), 0.07) 45%,
+    rgba(var(--cy-rgb), 0.13) 50%,
+    transparent
+  );
+  animation: sth-sweep 7s linear infinite;
+}
+
+@keyframes sth-sweep {
+  from { top: -160px; }
+  to   { top: 100%; }
+}
+
+/* ══ Ornament ══ filled into the slots the base layer leaves empty. */
+
+/* Header end caps */
+.app-header::before,
+.app-header::after {
+  content: '';
+  flex: none;
+  pointer-events: none;
+}
+
+.app-header::before {
+  width: 96px;
+  background: linear-gradient(90deg, var(--am), rgba(var(--am-rgb), 0.35));
+  border-radius: 14px 0 0 14px;
+}
+
+.app-header::after {
+  width: 52px;
+  background: linear-gradient(90deg, rgba(var(--vi-rgb), 0.35), var(--vi));
+  border-radius: 0 14px 14px 0;
+}
+
+/* Panel corner brackets */
+/* Corner brackets */
+.input-form::before,
+.input-form::after,
+.design-gauges::before,
+.design-gauges::after,
+.results-panel::before,
+.results-panel::after,
+.beam-diagram::before,
+.beam-diagram::after,
+.strain-diagram::before,
+.strain-diagram::after,
+.stress-strain-chart::before,
+.stress-strain-chart::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  border: 1.5px solid var(--cy);
+  opacity: 0.8;
+  z-index: 1;
+}
+
+.input-form::before,
+.design-gauges::before,
+.results-panel::before,
+.beam-diagram::before,
+.strain-diagram::before,
+.stress-strain-chart::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.input-form::after,
+.design-gauges::after,
+.results-panel::after,
+.beam-diagram::after,
+.strain-diagram::after,
+.stress-strain-chart::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+
+/* Rotating instrument ring in the section viewport */
+/* Rotating instrument ring in the corner of the section viewport */
+.ring {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 1px dashed rgba(var(--cy-rgb), 0.32);
+  animation: spin 14s linear infinite;
+  pointer-events: none;
+}
+
+.ring::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--am-rgb), 0.32);
+  border-top-color: transparent;
+  border-left-color: transparent;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sth-sweep {
+    display: none;
+  }
+}
