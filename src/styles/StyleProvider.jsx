@@ -57,6 +57,20 @@ export function StyleProvider({ children }) {
 }
 
 /**
+ * The active style's SVG <defs>, rendered *inside* each diagram's own <svg>.
+ *
+ * Not a shared global sprite: the PDF clones one diagram and serializes it
+ * standalone, so a url(#id) pointing at defs living elsewhere in the document
+ * resolves on screen and silently breaks in the report. Keeping them local to
+ * each svg is what makes gradient- and filter-based roles safe.
+ */
+export function StyleDefs() {
+  const { style } = useUiStyle();
+  const Defs = style.Defs;
+  return Defs ? <Defs /> : null;
+}
+
+/**
  * Renders the active style's ambience into one fixed, non-interactive layer.
  * A style with no ambience renders nothing.
  */

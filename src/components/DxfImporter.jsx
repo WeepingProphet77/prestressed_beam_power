@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { parseDxf, UNIT_SCALE_TO_INCHES } from '../utils/dxfParser';
 import { dxfRingsToSection } from '../utils/dxfGeometry';
-import theme from '../theme';
+import { useUiStyle } from '../styles/styleContext';
 
 /**
  * Upload a .dxf cross-section for the "Custom (DXF Import)" section type.
@@ -29,6 +29,7 @@ const PREVIEW = 220; // preview viewport (px)
 const PAD = 12;
 
 export default function DxfImporter({ value, onChange }) {
+  const roles = useUiStyle().roles;
   const fileRef = useRef(null);
   const [fileName, setFileName] = useState(null);
   const [rawRings, setRawRings] = useState(null); // parsed rings (DXF coords)
@@ -149,16 +150,16 @@ export default function DxfImporter({ value, onChange }) {
     preview = (
       <svg className="dxf-preview" viewBox={`0 0 ${w} ${hh}`} width="100%"
         style={{ maxWidth: w, display: 'block' }}>
-        <path d={d} fillRule="evenodd" fill="rgba(127,232,255,0.10)" stroke={theme.concreteStroke} strokeWidth="1.5" />
+        <path d={d} fillRule="evenodd" data-role="concreteFill" fill={roles.concreteFill.color} stroke={roles.concreteStroke.color} strokeWidth="1.5" />
         {holes.map((hole, i) =>
           hole.length >= 3 ? (
-            <path key={i} d={ringPath(hole)} fill="none" stroke={theme.amber} strokeWidth="1.2" strokeDasharray="4,3" />
+            <path key={i} d={ringPath(hole)} fill="none" data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.2" strokeDasharray="4,3" />
           ) : null
         )}
         {/* Reinforcement nodes (DXF POINT entities) → steel-layer locations. */}
         {nodes.map((n, i) => (
           <circle key={`n${i}`} cx={sx(n.x)} cy={sy(n.depth)} r={3.2}
-            fill={theme.ok} stroke={theme.dotStroke} strokeWidth="1" />
+            data-role="tensionSteel" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1" />
         ))}
       </svg>
     );

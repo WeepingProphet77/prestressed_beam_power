@@ -57,7 +57,7 @@ describe('style contract validation', () => {
     description: 'A style used only by these tests',
     colorScheme: 'dark',
     roles: {
-      ...Object.fromEntries(COLOR_ROLES.map((r) => [r, '#000000'])),
+      ...Object.fromEntries(COLOR_ROLES.map((r) => [r, { color: '#000000', width: 1 }])),
       ...Object.fromEntries(LIST_ROLES.map((r) => [r, ['#000000', '#111', '#222', '#333', '#444', '#555']])),
     },
   });
@@ -70,6 +70,24 @@ describe('style contract validation', () => {
     const s = valid();
     delete s.roles.neutralAxis;
     expect(validateStyle(s)).toContain('role "neutralAxis" is missing');
+  });
+
+  it('rejects a role given as a bare color instead of a spec', () => {
+    const s = valid();
+    s.roles.concreteStroke = '#ff0000';
+    expect(validateStyle(s)).toContain('role "concreteStroke" is missing');
+  });
+
+  it('rejects a spec with no color', () => {
+    const s = valid();
+    s.roles.concreteStroke = { width: 2 };
+    expect(validateStyle(s)).toContain('role "concreteStroke" has no color');
+  });
+
+  it('rejects a non-positive stroke width', () => {
+    const s = valid();
+    s.roles.concreteStroke = { color: '#fff', width: 0 };
+    expect(validateStyle(s).join()).toMatch(/non-positive width/);
   });
 
   it('rejects a non-slug id', () => {

@@ -1,10 +1,12 @@
-import theme from '../theme';
+import { useUiStyle } from '../styles/styleContext';
+import { StyleDefs } from '../styles/StyleProvider';
 
 /**
  * SVG cross-section diagram of the beam with reinforcement layers,
  * neutral axis, and Whitney stress block visualization.
  */
 export default function BeamDiagram({ section, results }) {
+  const roles = useUiStyle().roles;
   if (!section || !results) return null;
 
   const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb, numStems, stemWidth, numVoids, voidDiameter, points, holes } = section;
@@ -337,9 +339,10 @@ export default function BeamDiagram({ section, results }) {
         width="100%"
         style={{ maxWidth: svgW, display: 'block', margin: '0 auto' }}
       >
+        <StyleDefs />
         <defs>
           <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6">
-            <path d="M0,6 L6,0" stroke={theme.hatchStroke} strokeWidth="0.8" />
+            <path d="M0,6 L6,0" data-role="hatchStroke" stroke={roles.hatchStroke.color} strokeWidth="0.8" />
           </pattern>
           <linearGradient id="concFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="rgba(127,232,255,0.16)" />
@@ -364,23 +367,23 @@ export default function BeamDiagram({ section, results }) {
         {/* Stress block fill */}
         {isCustom ? (
           <g clipPath="url(#stressClip)">
-            <path d={stressBlockPath} fillRule="evenodd" fill={theme.stressBlockFill} stroke="none" />
+            <path d={stressBlockPath} fillRule="evenodd" data-role="stressBlockFill" fill={roles.stressBlockFill.color} stroke="none" />
             <path
               d={stressBlockPath}
               fillRule="evenodd"
               fill="url(#hatch)"
-              stroke={theme.stressBlockStroke}
+              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
               strokeWidth="1"
               strokeDasharray="4,3"
             />
           </g>
         ) : (
           <>
-            <path d={stressBlockPath} fill={theme.stressBlockFill} stroke="none" />
+            <path d={stressBlockPath} data-role="stressBlockFill" fill={roles.stressBlockFill.color} stroke="none" />
             <path
               d={stressBlockPath}
               fill="url(#hatch)"
-              stroke={theme.stressBlockStroke}
+              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
               strokeWidth="1"
               strokeDasharray="4,3"
             />
@@ -392,7 +395,7 @@ export default function BeamDiagram({ section, results }) {
           d={outlinePath}
           fillRule={isCustom ? 'evenodd' : 'nonzero'}
           fill="none"
-          stroke={theme.concreteStroke}
+          data-role="concreteStroke" stroke={roles.concreteStroke.color}
           strokeWidth="1.8"
         />
 
@@ -402,7 +405,7 @@ export default function BeamDiagram({ section, results }) {
           y1={naY}
           x2={beamRightX + 6}
           y2={naY}
-          stroke={theme.neutralAxis}
+          data-role="neutralAxis" stroke={roles.neutralAxis.color}
           strokeWidth="1.3"
           strokeDasharray="7,4"
         />
@@ -431,16 +434,16 @@ export default function BeamDiagram({ section, results }) {
                 cx={layerCx - 10}
                 cy={ly}
                 r={dotR}
-                fill={isTension ? theme.tensionSteel : theme.compressionSteel}
-                stroke={theme.dotStroke}
+                fill={isTension ? roles.tensionSteel.color : roles.compressionSteel.color}
+                data-role="dotStroke" stroke={roles.dotStroke.color}
                 strokeWidth="1"
               />
               <circle
                 cx={layerCx + 10}
                 cy={ly}
                 r={dotR}
-                fill={isTension ? theme.tensionSteel : theme.compressionSteel}
-                stroke={theme.dotStroke}
+                fill={isTension ? roles.tensionSteel.color : roles.compressionSteel.color}
+                data-role="dotStroke" stroke={roles.dotStroke.color}
                 strokeWidth="1"
               />
               {/* Label */}
@@ -452,9 +455,9 @@ export default function BeamDiagram({ section, results }) {
         })}
 
         {/* Dimension: total depth */}
-        <line x1={ox - 25} y1={oy} x2={ox - 25} y2={oy + drawH} stroke={theme.axis} strokeWidth="1" strokeDasharray="3,3" />
-        <line x1={ox - 30} y1={oy} x2={ox - 20} y2={oy} stroke={theme.axis} strokeWidth="1" />
-        <line x1={ox - 30} y1={oy + drawH} x2={ox - 20} y2={oy + drawH} stroke={theme.axis} strokeWidth="1" />
+        <line x1={ox - 25} y1={oy} x2={ox - 25} y2={oy + drawH} data-role="axis" stroke={roles.axis.color} strokeWidth="1" strokeDasharray="3,3" />
+        <line x1={ox - 30} y1={oy} x2={ox - 20} y2={oy} data-role="axis" stroke={roles.axis.color} strokeWidth="1" />
+        <line x1={ox - 30} y1={oy + drawH} x2={ox - 20} y2={oy + drawH} data-role="axis" stroke={roles.axis.color} strokeWidth="1" />
         <text
           x={ox - 28}
           y={oy + drawH / 2}
@@ -471,12 +474,12 @@ export default function BeamDiagram({ section, results }) {
             y="0"
             width="10"
             height="10"
-            fill={theme.stressBlockFill}
-            stroke={theme.stressBlockStroke}
+            data-role="stressBlockFill" fill={roles.stressBlockFill.color}
+            data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
             strokeWidth="1"
           />
           <text x="15" y="9" className="diagram-label legend-text">Whitney stress block (0.85f&#x2032;c)</text>
-          <line x1="0" y1="21" x2="10" y2="21" stroke={theme.neutralAxis} strokeWidth="1.5" strokeDasharray="4,2" />
+          <line x1="0" y1="21" x2="10" y2="21" data-role="neutralAxis" stroke={roles.neutralAxis.color} strokeWidth="1.5" strokeDasharray="4,2" />
           <text x="15" y="24" className="diagram-label legend-text">Neutral axis</text>
         </g>
       </svg>

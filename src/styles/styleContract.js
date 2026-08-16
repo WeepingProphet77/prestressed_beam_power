@@ -6,7 +6,17 @@
  * role fails a test rather than rendering an invisible diagram.
  */
 
-/** Roles that carry a single color value. */
+/**
+ * Roles that carry a line/fill spec.
+ *
+ * A role is `{ color, width?, dash? }` — not a bare color — because linework is
+ * as much a part of a style as its palette. A blueprint style draws heavy solid
+ * lines where a neon style draws thin ones; without width and dash on the role,
+ * every style would render identical diagrams in different hues.
+ *
+ * `color` is required. `width` and `dash` are optional and only meaningful for
+ * stroked roles; fills ignore them.
+ */
 export const COLOR_ROLES = [
   'concreteStroke',
   'concreteFill',
@@ -56,9 +66,20 @@ export function validateStyle(style) {
   }
 
   const roles = style.roles || {};
-  for (const role of COLOR_ROLES) {
-    if (typeof roles[role] !== 'string' || !roles[role].trim()) {
-      problems.push(`role "${role}" is missing`);
+  for (const name of COLOR_ROLES) {
+    const role = roles[name];
+    if (!role || typeof role !== 'object' || Array.isArray(role)) {
+      problems.push(`role "${name}" is missing`);
+      continue;
+    }
+    if (typeof role.color !== 'string' || !role.color.trim()) {
+      problems.push(`role "${name}" has no color`);
+    }
+    if (role.width !== undefined && !(typeof role.width === 'number' && role.width > 0)) {
+      problems.push(`role "${name}" has a non-positive width`);
+    }
+    if (role.dash !== undefined && typeof role.dash !== 'string') {
+      problems.push(`role "${name}" dash must be a string`);
     }
   }
   for (const role of LIST_ROLES) {

@@ -1,12 +1,14 @@
 import { generateStressStrainCurve } from '../utils/beamCalculations';
 import steelPresets from '../data/steelPresets';
-import theme from '../theme';
+import { useUiStyle } from '../styles/styleContext';
+import { StyleDefs } from '../styles/StyleProvider';
 
 /**
  * SVG stress-strain chart showing the power formula curves for all steel types
  * and overlaying the operating points from the current analysis.
  */
 export default function StressStrainChart({ results }) {
+  const roles = useUiStyle().roles;
   const width = 560;
   const height = 380;
   const margin = { top: 30, right: 20, bottom: 55, left: 65 };
@@ -27,7 +29,7 @@ export default function StressStrainChart({ results }) {
   const yScale = (val) => margin.top + plotH - (val / maxStress) * plotH;
 
   // Colors for each curve
-  const colors = theme.series;
+  const colors = roles.series;
 
   // Grid lines
   const xTicks = [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05];
@@ -37,6 +39,7 @@ export default function StressStrainChart({ results }) {
     <div className="stress-strain-chart">
       <h3>Steel Stress-Strain Curves (Power Formula)</h3>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ maxWidth: width }}>
+        <StyleDefs />
         {/* Grid */}
         {xTicks.map((t) => (
           <line
@@ -45,7 +48,7 @@ export default function StressStrainChart({ results }) {
             y1={margin.top}
             x2={xScale(t)}
             y2={margin.top + plotH}
-            stroke={theme.grid}
+            data-role="grid" stroke={roles.grid.color}
             strokeWidth="0.5"
           />
         ))}
@@ -56,7 +59,7 @@ export default function StressStrainChart({ results }) {
             y1={yScale(t)}
             x2={margin.left + plotW}
             y2={yScale(t)}
-            stroke={theme.grid}
+            data-role="grid" stroke={roles.grid.color}
             strokeWidth="0.5"
           />
         ))}
@@ -67,7 +70,7 @@ export default function StressStrainChart({ results }) {
           y1={margin.top + plotH}
           x2={margin.left + plotW}
           y2={margin.top + plotH}
-          stroke={theme.axis}
+          data-role="axis" stroke={roles.axis.color}
           strokeWidth="1"
         />
         <line
@@ -75,7 +78,7 @@ export default function StressStrainChart({ results }) {
           y1={margin.top}
           x2={margin.left}
           y2={margin.top + plotH}
-          stroke={theme.axis}
+          data-role="axis" stroke={roles.axis.color}
           strokeWidth="1"
         />
 
@@ -139,7 +142,7 @@ export default function StressStrainChart({ results }) {
             const y = yScale(Math.abs(lr.stress));
             return (
               <g key={idx}>
-                <circle cx={x} cy={y} r="4.5" fill={theme.ok} stroke={theme.dotStroke} strokeWidth="1.5" />
+                <circle cx={x} cy={y} r="4.5" data-role="tensionSteel" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1.5" />
                 <text x={x + 8} y={y - 6} className="chart-point-label">
                   L<tspan baselineShift="sub" fontSize="8">{idx + 1}</tspan>
                 </text>

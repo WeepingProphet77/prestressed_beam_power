@@ -1,10 +1,12 @@
-import theme from '../theme';
+import { useUiStyle } from '../styles/styleContext';
+import { StyleDefs } from '../styles/StyleProvider';
 
 /**
  * Biaxial φMx–φMy interaction diagram: strength envelope, cracking envelope,
  * factored-demand and service points, with NA-aligned φMnx/φMny anchors marked.
  */
 export default function InteractionDiagram({ results }) {
+  const roles = useUiStyle().roles;
   if (!results || results.mode !== 'biaxial') return null;
   const { envelope, anchors, demand, cracking } = results;
 
@@ -46,15 +48,16 @@ export default function InteractionDiagram({ results }) {
     <div className="beam-diagram interaction-diagram">
       <h3>Biaxial Interaction (φMx–φMy)</h3>
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" style={{ maxWidth: SIZE, display: 'block', margin: '0 auto' }}>
+        <StyleDefs />
         {/* axes */}
-        <line x1={PAD} y1={cy} x2={SIZE - PAD} y2={cy} stroke={theme.axis} strokeWidth="1" />
-        <line x1={cx} y1={PAD} x2={cx} y2={SIZE - PAD} stroke={theme.axis} strokeWidth="1" />
+        <line x1={PAD} y1={cy} x2={SIZE - PAD} y2={cy} data-role="axis" stroke={roles.axis.color} strokeWidth="1" />
+        <line x1={cx} y1={PAD} x2={cx} y2={SIZE - PAD} data-role="axis" stroke={roles.axis.color} strokeWidth="1" />
         {ticks.map((v) => (
           <g key={v}>
-            <line x1={X(v)} y1={cy - 3} x2={X(v)} y2={cy + 3} stroke={theme.axis} />
-            <line x1={X(-v)} y1={cy - 3} x2={X(-v)} y2={cy + 3} stroke={theme.axis} />
-            <line x1={cx - 3} y1={Y(v)} x2={cx + 3} y2={Y(v)} stroke={theme.axis} />
-            <line x1={cx - 3} y1={Y(-v)} x2={cx + 3} y2={Y(-v)} stroke={theme.axis} />
+            <line x1={X(v)} y1={cy - 3} x2={X(v)} y2={cy + 3} data-role="axis" stroke={roles.axis.color} />
+            <line x1={X(-v)} y1={cy - 3} x2={X(-v)} y2={cy + 3} data-role="axis" stroke={roles.axis.color} />
+            <line x1={cx - 3} y1={Y(v)} x2={cx + 3} y2={Y(v)} data-role="axis" stroke={roles.axis.color} />
+            <line x1={cx - 3} y1={Y(-v)} x2={cx + 3} y2={Y(-v)} data-role="axis" stroke={roles.axis.color} />
           </g>
         ))}
         <text x={SIZE - PAD} y={cy - 6} className="diagram-label" textAnchor="end">+φMx</text>
@@ -63,32 +66,32 @@ export default function InteractionDiagram({ results }) {
 
         {/* cracking envelope */}
         {crack.length > 2 && (
-          <path d={toPath(crack)} fill="none" stroke={theme.amber} strokeWidth="1.5" strokeDasharray="5,3" />
+          <path d={toPath(crack)} fill="none" data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.5" strokeDasharray="5,3" />
         )}
 
         {/* strength envelope */}
-        <path d={toPath(strength)} fill="rgba(127,232,255,0.10)" stroke={theme.cyan} strokeWidth="1.8" />
+        <path d={toPath(strength)} fill="rgba(127,232,255,0.10)" data-role="concreteStroke" stroke={roles.concreteStroke.color} strokeWidth="1.8" />
 
         {/* NA-aligned anchors */}
         {[anchors.xSag, anchors.xHog, anchors.yPos, anchors.yNeg].map((a, i) => (
-          <circle key={i} cx={X(a.phiMx)} cy={Y(a.phiMy)} r="3.5" fill={theme.ok} stroke={theme.dotStroke} strokeWidth="1" />
+          <circle key={i} cx={X(a.phiMx)} cy={Y(a.phiMy)} r="3.5" data-role="tensionSteel" fill={roles.tensionSteel.color} stroke={roles.dotStroke.color} strokeWidth="1" />
         ))}
 
         {/* service point */}
         {(sx !== 0 || sy !== 0) && (
           <g>
-            <circle cx={X(sx)} cy={Y(sy)} r="4" fill={theme.amber} stroke={theme.dotStroke} strokeWidth="1" />
-            <text x={X(sx) + 6} y={Y(sy) - 4} className="diagram-label" fontSize="9" fill={theme.amber}>service</text>
+            <circle cx={X(sx)} cy={Y(sy)} r="4" data-role="stressBlockStroke" fill={roles.stressBlockStroke.color} stroke={roles.dotStroke.color} strokeWidth="1" />
+            <text x={X(sx) + 6} y={Y(sy) - 4} className="diagram-label" fontSize="9" data-role="stressBlockStroke" fill={roles.stressBlockStroke.color}>service</text>
           </g>
         )}
 
         {/* demand point + radial line */}
         {demand && (
           <g>
-            <line x1={cx} y1={cy} x2={X(demand.Mux)} y2={Y(demand.Muy)} stroke={theme.bad} strokeWidth="1" strokeDasharray="3,2" />
+            <line x1={cx} y1={cy} x2={X(demand.Mux)} y2={Y(demand.Muy)} data-role="neutralAxis" stroke={roles.neutralAxis.color} strokeWidth="1" strokeDasharray="3,2" />
             <circle cx={X(demand.Mux)} cy={Y(demand.Muy)} r="4.5"
-              fill={demand.pass ? theme.ok : theme.bad} stroke={theme.dotStroke} strokeWidth="1.5" />
-            <text x={X(demand.Mux) + 6} y={Y(demand.Muy) + 4} className="diagram-label" fontSize="9" fill={theme.bad}>
+              fill={demand.pass ? roles.tensionSteel.color : roles.neutralAxis.color} data-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1.5" />
+            <text x={X(demand.Mux) + 6} y={Y(demand.Muy) + 4} className="diagram-label" fontSize="9" data-role="neutralAxis" fill={roles.neutralAxis.color}>
               demand
             </text>
           </g>
@@ -96,9 +99,9 @@ export default function InteractionDiagram({ results }) {
 
         {/* legend */}
         <g transform={`translate(${PAD}, ${SIZE - 6})`}>
-          <line x1="0" y1="-4" x2="14" y2="-4" stroke={theme.cyan} strokeWidth="2" />
+          <line x1="0" y1="-4" x2="14" y2="-4" data-role="concreteStroke" stroke={roles.concreteStroke.color} strokeWidth="2" />
           <text x="18" y="-1" className="diagram-label legend-text">φMn strength</text>
-          <line x1="100" y1="-4" x2="114" y2="-4" stroke={theme.amber} strokeWidth="1.5" strokeDasharray="4,2" />
+          <line x1="100" y1="-4" x2="114" y2="-4" data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.5" strokeDasharray="4,2" />
           <text x="118" y="-1" className="diagram-label legend-text">cracking</text>
         </g>
       </svg>

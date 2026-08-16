@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import theme from '../theme';
+import { useUiStyle } from '../styles/styleContext';
 
 /**
  * Interactive cross-section drawer for the "custom" section type.
@@ -25,9 +25,16 @@ const PX = 9;             // pixels per inch
 const PAD = 24;           // svg padding (px)
 const SNAP = 1.0;         // snap-to-first-node radius (in)
 
-const RING_COLORS = [theme.cyan, theme.amber, theme.ok, theme.violet];
 
 export default function SectionDrawer({ value, onChange }) {
+  const roles = useUiStyle().roles;
+  /* Ring colors come from the active style, so this cannot be module-level. */
+  const RING_COLORS = [
+    roles.concreteStroke.color,
+    roles.stressBlockStroke.color,
+    roles.tensionSteel.color,
+    roles.compressionSteel.color,
+  ];
   // rings: [{ points: [{x,y}], closed: bool }]
   const [rings, setRings] = useState(() => {
     if (value?.points?.length >= 3) {
@@ -250,7 +257,7 @@ export default function SectionDrawer({ value, onChange }) {
                 />
                 {ring.points.map((p, i) => (
                   <circle key={i} cx={toPx(p.x)} cy={toPx(p.y)} r={i === 0 && !ring.closed ? 5 : 3.5}
-                    fill={i === 0 && !ring.closed ? theme.ok : color} stroke={theme.dotStroke} strokeWidth="1" />
+                    fill={i === 0 && !ring.closed ? roles.tensionSteel.color : color} data-role="dotStroke" stroke={roles.dotStroke.color} strokeWidth="1" />
                 ))}
               </g>
             );
@@ -259,21 +266,21 @@ export default function SectionDrawer({ value, onChange }) {
           {/* Rubber-band from last node to cursor */}
           {lastNode && (
             <line x1={toPx(lastNode.x)} y1={toPx(lastNode.y)} x2={toPx(cursor.x)} y2={toPx(cursor.y)}
-              stroke={theme.cyan} strokeWidth="1.2" strokeDasharray="4,3" />
+              data-role="concreteStroke" stroke={roles.concreteStroke.color} strokeWidth="1.2" strokeDasharray="4,3" />
           )}
 
           {/* Cursor crosshair */}
           <g>
             <line x1={toPx(cursor.x) - 8} y1={toPx(cursor.y)} x2={toPx(cursor.x) + 8} y2={toPx(cursor.y)}
-              stroke={theme.amber} strokeWidth="1.4" />
+              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.4" />
             <line x1={toPx(cursor.x)} y1={toPx(cursor.y) - 8} x2={toPx(cursor.x)} y2={toPx(cursor.y) + 8}
-              stroke={theme.amber} strokeWidth="1.4" />
+              data-role="stressBlockStroke" stroke={roles.stressBlockStroke.color} strokeWidth="1.4" />
           </g>
 
           {/* Live Δx / Δy readout near the cursor */}
           {lastNode && (
             <text x={toPx(cursor.x) + 10} y={toPx(cursor.y) - 8} className="drawer-delta"
-              fontSize="11" fill={theme.cyanBright}>
+              fontSize="11" data-role="concreteStroke" fill={roles.concreteStroke.color}>
               Δx={dx.toFixed(2)}&quot;, Δy={dy.toFixed(2)}&quot;
             </text>
           )}
