@@ -11,25 +11,27 @@
    ══════════════════════════════════════════════════════════════════════════ */
 
 [data-ui-style='golden-runes'] {
-  /* ══ Base palette ══ (token names are the contract; the values are ours) */
+  /* ══ Base palette ══
+     The token names are the contract and are deliberately color-agnostic:
+     accent-1 is cyan in Star Trek Holo and gold here. */
 
-  /* Primary — gold */
-  --cy-rgb: 217, 164, 65;
-  --cy-dim-rgb: 138, 106, 53;
-  --cy-bright-rgb: 245, 224, 163;
-  --cy-hi-rgb: 242, 193, 78;
-  --cy-max-rgb: 255, 243, 208;
-  /* Accents — ember, bone, verdigris, rust */
-  --am-rgb: 224, 139, 51;
-  --am-dim-rgb: 138, 90, 36;
-  --vi-rgb: 207, 195, 160;
-  --vi-hi-rgb: 239, 231, 207;
-  --ok-rgb: 111, 174, 134;
-  --bad-rgb: 200, 84, 58;
-  --bad-hi-rgb: 231, 155, 134;
+  /* accent-1 — gold */
+  --accent-1-rgb: 217, 164, 65;
+  --accent-1-dim-rgb: 138, 106, 53;
+  --accent-1-bright-rgb: 245, 224, 163;
+  --accent-1-hi-rgb: 242, 193, 78;
+  --accent-1-max-rgb: 255, 243, 208;
+  /* accent-2 ember, accent-3 bone, success verdigris, danger rust */
+  --accent-2-rgb: 224, 139, 51;
+  --accent-2-dim-rgb: 138, 90, 36;
+  --accent-3-rgb: 207, 195, 160;
+  --accent-3-bright-rgb: 239, 231, 207;
+  --success-rgb: 111, 174, 134;
+  --danger-rgb: 200, 84, 58;
+  --danger-bright-rgb: 231, 155, 134;
   /* Neutrals and surfaces */
   --ink-rgb: 20, 16, 10;
-  --white-rgb: 255, 250, 238;
+  --bright-rgb: 255, 250, 238;
   --panel-base-rgb: 36, 28, 14;
   --panel-solid-rgb: 26, 20, 10;
   --surface-rgb: 30, 24, 12;
@@ -43,38 +45,38 @@
   --alert-pulse-rgb: 92, 30, 16;
   --warn-ground-rgb: 60, 44, 12;
   --sheen-rgb: 140, 105, 40;
-  --aura-teal-rgb: 120, 85, 25;
-  --aura-violet-rgb: 92, 46, 16;
+  --aura-1-rgb: 120, 85, 25;
+  --aura-2-rgb: 92, 46, 16;
 
   /* ══ Solid forms ══ */
-  --cy: rgb(var(--cy-rgb));
-  --cy-dim: rgb(var(--cy-dim-rgb));
-  --cy-bright: rgb(var(--cy-bright-rgb));
-  --cy-hi: rgb(var(--cy-hi-rgb));
-  --cy-max: rgb(var(--cy-max-rgb));
-  --am: rgb(var(--am-rgb));
-  --am-dim: rgb(var(--am-dim-rgb));
-  --vi: rgb(var(--vi-rgb));
-  --vi-hi: rgb(var(--vi-hi-rgb));
-  --ok: rgb(var(--ok-rgb));
-  --bad: rgb(var(--bad-rgb));
-  --bad-hi: rgb(var(--bad-hi-rgb));
+  --accent-1: rgb(var(--accent-1-rgb));
+  --accent-1-dim: rgb(var(--accent-1-dim-rgb));
+  --accent-1-bright: rgb(var(--accent-1-bright-rgb));
+  --accent-1-hi: rgb(var(--accent-1-hi-rgb));
+  --accent-1-max: rgb(var(--accent-1-max-rgb));
+  --accent-2: rgb(var(--accent-2-rgb));
+  --accent-2-dim: rgb(var(--accent-2-dim-rgb));
+  --accent-3: rgb(var(--accent-3-rgb));
+  --accent-3-bright: rgb(var(--accent-3-bright-rgb));
+  --success: rgb(var(--success-rgb));
+  --danger: rgb(var(--danger-rgb));
+  --danger-bright: rgb(var(--danger-bright-rgb));
   --ink: rgb(var(--ink-rgb));
-  --white: rgb(var(--white-rgb));
+  --bright: rgb(var(--bright-rgb));
   --void-solid: rgb(var(--void-rgb));
   --shadow-solid: rgb(var(--shadow-rgb));
 
   --panel: rgba(var(--panel-base-rgb), 0.42);
   --panel-solid: rgb(var(--panel-solid-rgb));
   --panel-deep: rgba(var(--surface-deep-rgb), 0.72);
-  --line: rgba(var(--cy-rgb), 0.26);
-  --line-soft: rgba(var(--cy-rgb), 0.12);
-  --glow: 0 0 8px rgba(var(--cy-rgb), 0.35);
-  --glow-strong: 0 0 22px rgba(var(--cy-rgb), 0.5);
+  --line: rgba(var(--accent-1-rgb), 0.26);
+  --line-soft: rgba(var(--accent-1-rgb), 0.12);
+  --glow: 0 0 8px rgba(var(--accent-1-rgb), 0.35);
+  --glow-strong: 0 0 22px rgba(var(--accent-1-rgb), 0.5);
 
   /* Serif, from system stacks only — no download, so the style still looks
      like itself with the network unavailable. */
-  --mono: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
+  --font: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
     'Hoefler Text', Georgia, 'Times New Roman', serif;
 
   /* Airier than the HUD — this style wants room around things. */
@@ -139,15 +141,15 @@
 .gr-haze {
   z-index: 0;
   background:
-    radial-gradient(ellipse 70% 50% at 30% 15%, rgba(var(--cy-rgb), 0.1), transparent 65%),
-    radial-gradient(ellipse 60% 45% at 78% 85%, rgba(var(--am-rgb), 0.07), transparent 65%);
+    radial-gradient(ellipse 70% 50% at 30% 15%, rgba(var(--accent-1-rgb), 0.1), transparent 65%),
+    radial-gradient(ellipse 60% 45% at 78% 85%, rgba(var(--accent-2-rgb), 0.07), transparent 65%);
   animation: gr-breathe 18s ease-in-out infinite;
 }
 
 /* A slow ember warmth beneath it. */
 .gr-emberglow {
   z-index: 0;
-  background: radial-gradient(ellipse 90% 60% at 50% 110%, rgba(var(--am-rgb), 0.09), transparent 70%);
+  background: radial-gradient(ellipse 90% 60% at 50% 110%, rgba(var(--accent-2-rgb), 0.09), transparent 70%);
   mix-blend-mode: screen;
   animation: gr-breathe 26s ease-in-out infinite reverse;
 }
@@ -166,7 +168,7 @@
 
 .gr-runes path {
   fill: none;
-  stroke: rgb(var(--cy-rgb));
+  stroke: rgb(var(--accent-1-rgb));
   stroke-width: 1.1;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
@@ -198,7 +200,7 @@
 [data-ui-style='golden-runes'] .strain-diagram,
 [data-ui-style='golden-runes'] .stress-strain-chart {
   border: 1px solid var(--line);
-  border-top-color: rgba(var(--cy-rgb), 0.42);
+  border-top-color: rgba(var(--accent-1-rgb), 0.42);
 }
 
 /* A hairline of gold along the top edge — the panel's "gilded" rule. */
@@ -214,7 +216,7 @@
   left: 12%;
   right: 12%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--cy-rgb), 0.75), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-1-rgb), 0.75), transparent);
   pointer-events: none;
 }
 
@@ -231,21 +233,21 @@
   bottom: -1px;
   width: 14px;
   height: 14px;
-  border-right: 1px solid rgba(var(--cy-rgb), 0.55);
-  border-bottom: 1px solid rgba(var(--cy-rgb), 0.55);
+  border-right: 1px solid rgba(var(--accent-1-rgb), 0.55);
+  border-bottom: 1px solid rgba(var(--accent-1-rgb), 0.55);
   pointer-events: none;
 }
 
 /* Header caps: gilded ends, softer than the HUD's saturated blocks. */
 [data-ui-style='golden-runes'] .app-header::before {
   width: 72px;
-  background: linear-gradient(90deg, rgba(var(--cy-rgb), 0.8), rgba(var(--am-rgb), 0.2));
+  background: linear-gradient(90deg, rgba(var(--accent-1-rgb), 0.8), rgba(var(--accent-2-rgb), 0.2));
   border-radius: 2px 0 0 2px;
 }
 
 [data-ui-style='golden-runes'] .app-header::after {
   width: 40px;
-  background: linear-gradient(90deg, rgba(var(--am-rgb), 0.2), rgba(var(--cy-rgb), 0.6));
+  background: linear-gradient(90deg, rgba(var(--accent-2-rgb), 0.2), rgba(var(--accent-1-rgb), 0.6));
   border-radius: 0 2px 2px 0;
 }
 
@@ -260,8 +262,8 @@
   pointer-events: none;
   opacity: 0.3;
   background: linear-gradient(transparent, transparent);
-  border-left: 1px solid rgba(var(--cy-rgb), 0.5);
-  border-top: 1px solid rgba(var(--cy-rgb), 0.5);
+  border-left: 1px solid rgba(var(--accent-1-rgb), 0.5);
+  border-top: 1px solid rgba(var(--accent-1-rgb), 0.5);
   transform: skewY(-8deg);
 }
 
@@ -272,8 +274,8 @@
   top: 10px;
   width: 14px;
   height: 22px;
-  border-left: 1px solid rgba(var(--cy-rgb), 0.55);
-  border-bottom: 1px solid rgba(var(--cy-rgb), 0.35);
+  border-left: 1px solid rgba(var(--accent-1-rgb), 0.55);
+  border-bottom: 1px solid rgba(var(--accent-1-rgb), 0.35);
 }
 
 /* Cracked linework on the section outline — the defs filter, applied where it

@@ -11,10 +11,10 @@
 }
 
 :root {
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 13px;
   line-height: 1.55;
-  color: var(--cy);
+  color: var(--accent-1);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -30,11 +30,11 @@ body {
   flex-direction: column;
   overflow-x: hidden;
   background:
-    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(var(--aura-teal-rgb), 0.4), transparent 60%),
-    radial-gradient(ellipse 90% 70% at 90% 110%, rgba(var(--aura-violet-rgb), 0.28), transparent 60%),
+    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(var(--aura-1-rgb), 0.4), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 90% 110%, rgba(var(--aura-2-rgb), 0.28), transparent 60%),
     var(--void-solid);
   background-attachment: fixed;
-  color: var(--cy);
+  color: var(--accent-1);
 }
 
 #root {
@@ -63,13 +63,13 @@ textarea {
 }
 
 ::selection {
-  background: rgba(var(--cy-rgb), 0.3);
-  color: var(--cy-bright);
+  background: rgba(var(--accent-1-rgb), 0.3);
+  color: var(--accent-1-bright);
 }
 
 /* Scrollbars tuned to the HUD */
 * {
-  scrollbar-color: rgba(var(--cy-rgb), 0.35) transparent;
+  scrollbar-color: rgba(var(--accent-1-rgb), 0.35) transparent;
   scrollbar-width: thin;
 }
 
@@ -83,12 +83,12 @@ textarea {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(var(--cy-rgb), 0.28);
+  background: rgba(var(--accent-1-rgb), 0.28);
   border: 1px solid var(--line);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--cy-rgb), 0.45);
+  background: rgba(var(--accent-1-rgb), 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {
