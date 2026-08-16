@@ -127,6 +127,8 @@ export default function StressStrainChart({ results }) {
               key={preset.id}
               d={d}
               fill="none"
+              data-stroke-role="series"
+              data-series-index={ci}
               stroke={colors[ci % colors.length]}
               strokeWidth="2"
               opacity="0.85"
@@ -161,7 +163,9 @@ export default function StressStrainChart({ results }) {
                 y1={ly}
                 x2={lx + 20}
                 y2={ly}
-                stroke={colors[ci % colors.length]}
+                data-stroke-role="series"
+              data-series-index={ci}
+              stroke={colors[ci % colors.length]}
                 strokeWidth="2.5"
               />
               <text x={lx + 25} y={ly + 4} className="chart-legend-text">

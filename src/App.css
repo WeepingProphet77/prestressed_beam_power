@@ -173,6 +173,51 @@
   pointer-events: none;
 }
 
+/* ── UI Style selector ── */
+.style-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.style-selector-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cy-dim);
+  white-space: nowrap;
+}
+
+.style-selector select {
+  padding: var(--space-2) var(--space-3);
+  font-family: inherit;
+  font-size: 10.5px;
+  color: var(--cy-bright);
+  background: var(--panel-deep);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--cy);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.style-selector select:hover {
+  border-color: rgba(var(--cy-rgb), 0.5);
+}
+
+.style-selector select:focus-visible {
+  outline: none;
+  border-left-color: var(--am);
+  box-shadow: 0 0 12px rgba(var(--cy-rgb), 0.4);
+}
+
+.style-selector option {
+  background: var(--panel-solid);
+  color: var(--cy-bright);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    Footer
    ══════════════════════════════════════════════════════════════════════════ */

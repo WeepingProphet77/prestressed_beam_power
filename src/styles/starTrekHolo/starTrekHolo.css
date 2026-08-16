@@ -171,39 +171,38 @@
 /* ══ Ornament ══ filled into the slots the base layer leaves empty. */
 
 /* Header end caps */
-.app-header::before,
-.app-header::after {
+[data-ui-style='star-trek-holo'] .app-header::before,
+[data-ui-style='star-trek-holo'] [data-ui-style='star-trek-holo'] .app-header::after {
   content: '';
   flex: none;
   pointer-events: none;
 }
 
-.app-header::before {
+[data-ui-style='star-trek-holo'] .app-header::before {
   width: 96px;
   background: linear-gradient(90deg, var(--am), rgba(var(--am-rgb), 0.35));
   border-radius: 14px 0 0 14px;
 }
 
-.app-header::after {
+[data-ui-style='star-trek-holo'] .app-header::after {
   width: 52px;
   background: linear-gradient(90deg, rgba(var(--vi-rgb), 0.35), var(--vi));
   border-radius: 0 14px 14px 0;
 }
 
 /* Panel corner brackets */
-/* Corner brackets */
-.input-form::before,
-.input-form::after,
-.design-gauges::before,
-.design-gauges::after,
-.results-panel::before,
-.results-panel::after,
-.beam-diagram::before,
-.beam-diagram::after,
-.strain-diagram::before,
-.strain-diagram::after,
-.stress-strain-chart::before,
-.stress-strain-chart::after {
+[data-ui-style='star-trek-holo'] .input-form::before,
+[data-ui-style='star-trek-holo'] .input-form::after,
+[data-ui-style='star-trek-holo'] .design-gauges::before,
+[data-ui-style='star-trek-holo'] .design-gauges::after,
+[data-ui-style='star-trek-holo'] .results-panel::before,
+[data-ui-style='star-trek-holo'] .results-panel::after,
+[data-ui-style='star-trek-holo'] .beam-diagram::before,
+[data-ui-style='star-trek-holo'] .beam-diagram::after,
+[data-ui-style='star-trek-holo'] .strain-diagram::before,
+[data-ui-style='star-trek-holo'] .strain-diagram::after,
+[data-ui-style='star-trek-holo'] .stress-strain-chart::before,
+[data-ui-style='star-trek-holo'] .stress-strain-chart::after {
   content: '';
   position: absolute;
   width: 16px;
@@ -214,24 +213,24 @@
   z-index: 1;
 }
 
-.input-form::before,
-.design-gauges::before,
-.results-panel::before,
-.beam-diagram::before,
-.strain-diagram::before,
-.stress-strain-chart::before {
+[data-ui-style='star-trek-holo'] .input-form::before,
+[data-ui-style='star-trek-holo'] .design-gauges::before,
+[data-ui-style='star-trek-holo'] .results-panel::before,
+[data-ui-style='star-trek-holo'] .beam-diagram::before,
+[data-ui-style='star-trek-holo'] .strain-diagram::before,
+[data-ui-style='star-trek-holo'] .stress-strain-chart::before {
   top: -1px;
   left: -1px;
   border-right: 0;
   border-bottom: 0;
 }
 
-.input-form::after,
-.design-gauges::after,
-.results-panel::after,
-.beam-diagram::after,
-.strain-diagram::after,
-.stress-strain-chart::after {
+[data-ui-style='star-trek-holo'] .input-form::after,
+[data-ui-style='star-trek-holo'] .design-gauges::after,
+[data-ui-style='star-trek-holo'] .results-panel::after,
+[data-ui-style='star-trek-holo'] .beam-diagram::after,
+[data-ui-style='star-trek-holo'] .strain-diagram::after,
+[data-ui-style='star-trek-holo'] .stress-strain-chart::after {
   bottom: -1px;
   right: -1px;
   border-left: 0;
@@ -240,7 +239,7 @@
 
 /* Rotating instrument ring in the section viewport */
 /* Rotating instrument ring in the corner of the section viewport */
-.ring {
+[data-ui-style='star-trek-holo'] .panel-deco {
   position: absolute;
   right: 16px;
   bottom: 16px;
@@ -252,7 +251,7 @@
   pointer-events: none;
 }
 
-.ring::after {
+[data-ui-style='star-trek-holo'] .panel-deco::after {
   content: '';
   position: absolute;
   inset: 10px;

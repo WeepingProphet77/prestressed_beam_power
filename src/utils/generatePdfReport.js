@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { printSpecFor, printTextColor, ensureContrastOnWhite } from '../styles/printSpec';
+import { printSpecFor, printTextColor, PRINT_FONT, ensureContrastOnWhite } from '../styles/printSpec';
 
 // ─── Greek / math text helpers ───────────────────────────────────────────────
 
@@ -1147,14 +1147,15 @@ function inlineStyles(original, clone) {
     'stroke-linecap', 'stroke-linejoin', 'stroke-opacity', 'fill-opacity',
     'opacity', 'font-family', 'font-size', 'font-weight', 'font-style',
     'text-anchor', 'dominant-baseline', 'color', 'stop-color', 'visibility',
-    'display',
+    'display', 'letter-spacing', 'font-variant',
   ];
 
   /* Resolve the report's own drawing from the element's role, never from how
      it looks on screen. A style's gradients, filters and animations therefore
      cannot reach the PDF, because nothing here reads them. */
-  const fillSpec = printSpecFor(original.getAttribute('data-fill-role'));
-  const strokeSpec = printSpecFor(original.getAttribute('data-stroke-role'));
+  const seriesIndex = original.getAttribute('data-series-index');
+  const fillSpec = printSpecFor(original.getAttribute('data-fill-role'), seriesIndex);
+  const strokeSpec = printSpecFor(original.getAttribute('data-stroke-role'), seriesIndex);
   /* Labels are colored by CSS class, which resolves to style tokens. Resolve
      them from the class instead, so the report reads the same for any style. */
   const textColor = original.tagName === 'text' || original.tagName === 'tspan'
@@ -1166,7 +1167,9 @@ function inlineStyles(original, clone) {
     if (!val) continue;
 
     let out = val;
-    if (prop === 'fill' && textColor) out = textColor;
+    /* Typography is the report's, not the style's. */
+    if (textColor && PRINT_FONT[prop] !== undefined) out = PRINT_FONT[prop];
+    else if (prop === 'fill' && textColor) out = textColor;
     else if (prop === 'fill' && fillSpec) out = fillSpec.color;
     else if (prop === 'stroke' && strokeSpec) out = strokeSpec.color;
     else if (prop === 'stroke-width' && strokeSpec?.width !== undefined) out = String(strokeSpec.width);
