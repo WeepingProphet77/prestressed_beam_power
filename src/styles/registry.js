@@ -1,17 +1,16 @@
 import starTrekHolo from './starTrekHolo';
-import goldenRunes from './goldenRunes';
 
 /**
  * The UI Style registry.
  *
  * Adding a style is two steps: write `src/styles/<id>/index.js` (plus its CSS
- * and, optionally, an Ambience component) and add it to this array. The
+ * and, optionally, Ambience and Defs components) and add it to this array. The
  * selector, the guardrail tests, and persistence all read from here, so
  * nothing else needs editing.
  *
  * Every entry must satisfy the contract in `styleContract.js`.
  */
-const styles = [starTrekHolo, goldenRunes];
+const styles = [starTrekHolo];
 
 export default styles;
 

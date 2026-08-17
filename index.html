@@ -7,9 +7,15 @@
   <head>
     <script>
       (function () {
+        /* Ids of the registered styles. Only a value in this list is applied:
+           a stale preference for a style that has since been removed would
+           otherwise set an attribute no stylesheet matches, and the app would
+           paint entirely unstyled until React mounted and corrected it.
+           Kept in sync with src/styles/registry.js by a test. */
+        var KNOWN = ['star-trek-holo'];
         try {
           var stored = localStorage.getItem('ui-style');
-          if (stored && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(stored)) {
+          if (stored && KNOWN.indexOf(stored) !== -1) {
             document.documentElement.setAttribute('data-ui-style', stored);
           }
         } catch (e) {

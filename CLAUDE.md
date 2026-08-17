@@ -14,7 +14,7 @@ under ACI 318-19, and exports a PDF calculation report.
 | --- | --- |
 | Dev server | `npm run dev` |
 | Production build | `npm run build` |
-| Tests | `npm test` (vitest, 54 tests) |
+| Tests | `npm test` (vitest, 98 tests) |
 | Lint | `npx eslint src/` |
 
 CI (`.github/workflows/deploy.yml`) runs **only on push to `main`** and only does
@@ -27,15 +27,28 @@ lint are not in CI, so run them locally before pushing.
 ```
 src/
   App.jsx                  layout shell, results/error state
-  index.css                design tokens (:root) + ambient background layers
-  App.css                  all component styling, keyed to class names
-  theme.js                 JS color palette for SVG + print mapping
+  index.css                reset + base typography. Owns no tokens.
+  App.css                  all component styling. Consumes tokens; owns no
+                           color, spacing, font size, tracking or ornament.
+  styles/
+    registry.js            the list of styles — add one here
+    styleContract.js       what a style must provide (data, so tests check it)
+    styleContext.js        context + useUiStyle()
+    StyleProvider.jsx      provider, <StyleAmbience />, <StyleDefs />
+    StyleSelector.jsx      header picker; hidden while only one style exists
+    printSpec.js           the report's own palette, type and contrast floor
+    starTrekHolo/          tokens, ornament, ambience for the one style
   components/              input form, diagrams, results panels
   utils/
     beamCalculations.js    the analysis engine
     generatePdfReport.js   jsPDF report generator
   data/steelPresets.js     steel grade parameters
 ```
+
+Four token scales, each defined per style with its own multiplier: **color**
+(`--accent-1-rgb` … composed as `rgba(var(--x-rgb), a)`), **density**
+(`--space-1…7` × `--density`), **type** (`--text-1…7` × `--text-scale`) and
+**tracking** (`--tracking-1…7` × `--tracking-scale`).
 
 ### Invariants
 
@@ -44,12 +57,13 @@ src/
 visual, the diff for those paths should be empty.
 
 **SVG cannot read CSS custom properties.** SVG presentation attributes (`fill`,
-`stroke`) do not resolve `var(--token)`. That is why `src/theme.js` exists and
-mirrors the CSS tokens. The two must be kept in sync by hand.
+`stroke`) do not resolve `var(--token)`. That is why each style declares
+`roles` in JS alongside its CSS tokens; the diagram components read them via
+`useUiStyle().roles`.
 
-**The PDF report must always print light, regardless of the on-screen theme.**
-This is the single most breakable thing in the repo, and it has broken once
-already — see below.
+**The PDF report must always print light and identical, regardless of the
+on-screen style.** This is the single most breakable thing in the repo, and it
+has broken twice — see below.
 
 ### How the PDF gets its colors (read before touching diagrams or themes)
 
@@ -57,15 +71,25 @@ already — see below.
 out of the DOM**, clones them, walks the tree inlining `getComputedStyle` values
 (`inlineStyles`), and rasterizes the result onto a white page (`svgToDataUrl`).
 
-Consequence: **whatever colors are on screen go into the PDF.** When the UI was
-restyled dark (#32), cyan outlines and near-white label text were drawn onto white
-paper and became illegible. The fix (#33) added `toPrintColor()` in `theme.js`,
-which remaps colors as they are inlined.
+Consequence: **left alone, whatever is on screen goes into the PDF.** When the UI
+was restyled dark (#32), cyan outlines and near-white label text were drawn onto
+white paper and became illegible.
 
-`toPrintColor()` is currently keyed on the **exact RGB triplets of the one theme
-that exists**. Any new theme whose diagram colors differ will miss the lookup, pass
-through unmapped, and reintroduce the bug. Fixing this properly is a required part
-of the UI Style feature — see Phase 3 below.
+That is now prevented structurally, in `styles/printSpec.js` (#39):
+
+1. Diagram elements carry `data-fill-role` / `data-stroke-role`, and the report
+   resolves color, width and dash **from the role, ignoring the computed value**.
+   Gradients, filters and animations cannot reach the report because it never
+   reads them.
+2. Text resolves from its **CSS class**, and typography is pinned to the
+   report's own font and `letter-spacing: normal`.
+3. Anything left over goes through `ensureContrastOnWhite`, a floor that
+   darkens a color until it reads on paper.
+
+**If you add anything to a diagram, tag it.** `roleTagging.test.js` rejects an
+untagged role-driven fill or stroke, an unindexed `series` stroke, and raw color
+literals in the captured components — every one of those was a real leak found
+by building a second style.
 
 When changing anything that affects diagram color, verify the actual PDF, not just
 the browser. Generate a report and extract the embedded images back out of it:
@@ -166,11 +190,22 @@ Fully supported, and *easier* for the PDF (already light). Two consequences:
   pickers and selects render dark) must become per-style, or light styles get
   dark form controls.
 
-## Worked example: "Golden Runes"
+## Worked example: "Golden Runes" (built, then removed)
 
-A planned style — dark ground, shimmering gold linework, Norse runes scattered as
-ornament, lines broken and cracked with age, drifting gold haze. Testing the plan
-against it exposed gaps worth fixing before any code is written.
+A style that was built and then removed at the user's request — dark ground,
+shimmering gold linework, Norse runes scattered as ornament, lines broken and
+cracked with age, drifting gold haze. **The section is kept because the design
+it forced is still in the code**: amendments 5–7 below, the role spec's `width`
+and `dash`, style-owned `<defs>`, and the `data-role` tagging all exist because
+of it.
+
+It is also the reason several PDF leaks are fixed. Building it — not the
+sabotage test — is what surfaced label typography following `--font` into the
+report, the stress-strain series never being tagged, and role-choosing ternaries
+being missed by the tag pass. **Building a second style is how this abstraction
+gets tested; nothing else found those.**
+
+Testing the plan against it exposed these gaps:
 
 | Need | Covered by | Gap |
 | --- | --- | --- |
@@ -299,7 +334,7 @@ reviewable.
 Rewrite `toPrintColor()` as a **role → print spec** map, resolved from each
 element's `data-role` rather than from its computed color. The report always
 prints in one neutral document palette with its own line weights, no matter what
-is on screen — so a heavy blueprint style, a thin neon style and Golden Runes'
+is on screen — so a heavy blueprint style, a thin neon style and a style using
 shimmering gradients all produce the same readable report.
 
 Tests: every role in the contract has a print color at ≥4.5:1 on white, and a
@@ -320,10 +355,19 @@ the registry, so new styles appear automatically. Keyboard accessible, labelled.
 
 ### Phase 6 — Second style (the real proof)
 
-The abstraction is unproven until a style that shares nothing with Star Trek Holo
-renders correctly — ideally a light one, to exercise `color-scheme`, the contrast
-guardrail, and the PDF decoupling in one go. Expect this phase to send small
-corrections back into Phases 1–3; that is the point of doing it.
+Done once, with Golden Runes, and it worked exactly as predicted: it sent four
+corrections back into Phases 2–3 that no other test had found. The style was then
+removed for taste reasons, leaving **Star Trek Holo as the only registered
+style**.
+
+That leaves the system in a slightly unusual state worth knowing about: the
+abstraction is real and was proven, but only one style currently exercises it.
+When the next style is added, expect it to surface a leak or two again — that is
+normal, and the guardrails (`roleTagging.test.js`, `registry.test.js`,
+`cssTokens.test.js`) exist to catch most of the classes already found.
+
+A light style remains the most valuable next one: it is the only thing that
+exercises `color-scheme` and contrast-against-own-background.
 
 ## Recommendations
 

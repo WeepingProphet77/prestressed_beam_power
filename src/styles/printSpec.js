@@ -138,8 +138,8 @@ const PRINT_TEXT = {
 /**
  * The report's own typography.
  *
- * Diagram labels take `font-family` from `--mono`, which each style redefines —
- * Golden Runes uses a serif stack — so left alone the report's labels would
+ * Diagram labels take `font-family` from the style's `--font`, which a style
+ * with a serif stack would change — so left alone the report's labels would
  * change typeface with the style. Pinning them here keeps the report constant
  * and matches the Helvetica jsPDF draws the rest of the page in.
  */

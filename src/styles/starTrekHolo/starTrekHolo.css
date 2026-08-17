@@ -16,9 +16,9 @@
        this block should contain a raw color value.
 
        Names are ordinal (accent-1/2/3) rather than color words: this style's
-       accent-1 is cyan, Golden Runes' is gold, and a name like --cy would be
-       wrong for every style but this one. The diagram roles in index.js are
-       the JS counterpart, since SVG cannot read custom properties. */
+       accent-1 is cyan, but a name like --cy would be wrong for any style that
+       is not. The diagram roles in index.js are the JS counterpart, since SVG
+       cannot read custom properties. */
 
     /* accent-1 — hologram cyan */
     --accent-1-rgb: 127, 232, 255;
