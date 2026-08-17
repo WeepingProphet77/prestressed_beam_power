@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import styles, { DEFAULT_STYLE_ID, getStyle } from './registry';
 import {
   validateStyle,
@@ -47,6 +50,26 @@ describe('style registry', () => {
 
   it('getStyle returns the requested style when it exists', () => {
     for (const s of styles) expect(getStyle(s.id)).toBe(s);
+  });
+
+  it('the pre-paint script in index.html knows exactly these style ids', () => {
+    /* index.html applies the stored preference before React mounts, so it has
+       its own copy of the id list. If a style is removed and that list is not
+       updated, a returning user with the stale preference gets an attribute no
+       stylesheet matches and the app paints unstyled until hydration. */
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    const known = [...(html.match(/var KNOWN = \[([^\]]*)\]/)?.[1] ?? '')
+      .matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    expect(known.sort(), 'index.html KNOWN list is out of sync with the registry')
+      .toEqual(styles.map((s) => s.id).sort());
+  });
+
+  it('index.html defaults to a registered style', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    const dflt = html.match(/<html[^>]*data-ui-style="([^"]+)"/)?.[1];
+    expect(styles.map((s) => s.id)).toContain(dflt);
   });
 });
 
