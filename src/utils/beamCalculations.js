@@ -499,7 +499,7 @@ export function analyzeBeam(section, steelLayers) {
   const cOverD = c / dt;
 
   // Prestress & cracking analysis. Mu (factored demand) is optional and, when
-  // supplied, enables the ACI 318-19 §9.6.1.3 1.33·Mu exception.
+  // supplied, feeds the legacy 1.33·Mu field (see prestressAndCracking) and the demand.
   const MuIn = (section.Mu || 0) * 12; // kip-ft → kip-in
   const cracking = prestressAndCracking(section, steelLayers, phiMn, MuIn);
 
@@ -846,9 +846,13 @@ export function prestressAndCracking(section, steelLayers, phiMn, Mu = 0) {
   const Mcr = Sb * (fr + P / A + P * e / Sb);
   const McrFt = Mcr / 12;
 
-  // Minimum flexural strength, ACI 318-19 §9.6.1.3: φMn must be at least the
-  // lesser of 1.2·Mcr and 1.33·Mu (the 1.33·Mu relief applies only when a
-  // factored demand Mu is supplied).
+  // LEGACY minimum-strength fields: "lesser of 1.2·Mcr and 1.33·Mu". This was
+  // long labeled ACI 318-19 §9.6.1.3, which is wrong on two counts: 9.6.1.3 is
+  // the nonprestressed 4/3·As waiver, and the 1.33·Mu relief is an AASHTO LRFD
+  // form that ACI 318-19 does not carry. The app does not report these fields;
+  // it reports aciMinimumStrength() from direction.js (9.6.2.1 / 9.6.2.2).
+  // They are kept, unchanged, so this engine stays numerically identical to the
+  // power-formula skill's copy of it.
   const Mcr12 = 1.2 * Mcr;
   const Mu133 = 1.33 * Mu;
   const useMuRelief = Mu > 0 && Mu133 < Mcr12;
