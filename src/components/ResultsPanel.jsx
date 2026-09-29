@@ -3,6 +3,7 @@
  * All calculation sections are collapsible (collapsed by default).
  */
 import { useState } from 'react';
+import { fmtConst, extremeBonded } from '../utils/format';
 
 function CollapsibleSection({ title, id, children }) {
   const [open, setOpen] = useState(false);
@@ -45,15 +46,18 @@ export default function ResultsPanel({ results }) {
     cOverD,
     fc,
     cracking,
+    minStrengthACI: ms,
+    tendonResults = [],
+    fpsBasis,
+    minBondedReinforcement: minBonded,
+    service,
   } = results;
 
-  // Find extreme tension layer (deepest) for evaluated formula display
-  let extremeLayer = layerResults[0];
-  for (const lr of layerResults) {
-    if (lr.depth > extremeLayer.depth) extremeLayer = lr;
-  }
-  const etl = extremeLayer;
-  const epsilonTy = etl ? etl.steel.fpy / etl.steel.Es : 0.002;
+  // Deepest bonded layer, for the evaluated power-formula and strain equations
+  const etl = extremeBonded(results);
+  const epsilonTy = results.epsilonTy ?? 0.002;
+  const hog = results.direction === 'hog';
+  const dFromTop = (r) => r.depthFromTop ?? r.depth;
 
   return (
     <div className="results-panel">
@@ -67,6 +71,14 @@ export default function ResultsPanel({ results }) {
           <table className="detail-table">
             <tbody>
               <tr>
+                <td>Moment direction</td>
+                <td>
+                  {hog
+                    ? 'Hogging (negative): top in tension, compression face at the bottom'
+                    : 'Sagging (positive): bottom in tension, compression face at the top'}
+                </td>
+              </tr>
+              <tr>
                 <td>f&#x2032;<sub>c</sub></td>
                 <td>{fc} ksi</td>
               </tr>
@@ -75,7 +87,7 @@ export default function ResultsPanel({ results }) {
                 <td>{beta1.toFixed(3)}</td>
               </tr>
               <tr>
-                <td>Neutral axis depth, c</td>
+                <td>Neutral axis depth, c{hog && ' (from the bottom)'}</td>
                 <td>{c.toFixed(3)} in</td>
               </tr>
               <tr>
@@ -95,9 +107,15 @@ export default function ResultsPanel({ results }) {
                 <td>{epsilonT.toFixed(6)}</td>
               </tr>
               <tr>
-                <td>Yield strain, &epsilon;<sub>ty</sub> = f<sub>py</sub> / E<sub>s</sub></td>
+                <td>Yield strain, &epsilon;<sub>ty</sub>{results.phiBasis?.startsWith('unbonded') ? ' (ACI 21.2.2.1)' : <> = f<sub>py</sub> / E<sub>s</sub></>}</td>
                 <td>{epsilonTy.toFixed(6)}</td>
               </tr>
+              {results.phiBasis && (
+                <tr>
+                  <td>&#x03D5; basis</td>
+                  <td>{results.phiBasis}</td>
+                </tr>
+              )}
               <tr>
                 <td>Strength reduction, &#x03D5;</td>
                 <td>{phi.toFixed(3)}</td>
@@ -112,6 +130,7 @@ export default function ResultsPanel({ results }) {
               </tr>
             </tbody>
           </table>
+          {hog && <p className="formula-note">{results.frameNote}</p>}
         </div>
       </CollapsibleSection>
 
@@ -120,6 +139,7 @@ export default function ResultsPanel({ results }) {
         <div className="result-details flexural-strength-section">
           <div className="cracking-formulas" style={{ borderTop: 'none', paddingTop: 0 }}>
             {/* Power Formula */}
+            {etl && (
             <div className="formula-block">
               <div className="formula-title">Power Formula (Devalapura&#8211;Tadros / PCI):</div>
               <div className="formula">
@@ -135,7 +155,7 @@ export default function ResultsPanel({ results }) {
                   <div className="formula">
                     <span className="formula-lhs" style={{visibility: 'hidden'}}>f<sub>s</sub></span> ={' '}
                     {etl.steel.Es.toLocaleString()}&#8239;({etl.strain.toFixed(6)}){' '}
-                    [ {etl.steel.Q} + (1 &minus; {etl.steel.Q}) / [1 + ({etl.steel.Es.toLocaleString()} &times; {etl.strain.toFixed(6)} / {etl.steel.K} &times; {etl.steel.fpy})<sup>{etl.steel.R}</sup>]<sup>1/{etl.steel.R}</sup> ]
+                    [ {fmtConst(etl.steel.Q)} + (1 &minus; {fmtConst(etl.steel.Q)}) / [1 + ({etl.steel.Es.toLocaleString()} &times; {etl.strain.toFixed(6)} / {fmtConst(etl.steel.K)} &times; {etl.steel.fpy})<sup>{fmtConst(etl.steel.R)}</sup>]<sup>1/{fmtConst(etl.steel.R)}</sup> ]
                   </div>
                   <div className="formula">
                     <span className="formula-lhs" style={{visibility: 'hidden'}}>f<sub>s</sub></span> ={' '}
@@ -147,6 +167,7 @@ export default function ResultsPanel({ results }) {
                 </>
               )}
             </div>
+            )}
 
             {/* Strain Compatibility */}
             <div className="formula-block">
@@ -173,6 +194,8 @@ export default function ResultsPanel({ results }) {
               <div className="formula-note">
                 &epsilon;<sub>cu</sub> = 0.003 per ACI 318. &Delta;&epsilon;<sub>decomp</sub> is the
                 concrete decompression strain at the steel level (bonded prestress only).
+                {' '}d<sub>i</sub> and c are measured from the compression face
+                {hog ? ', which is the member bottom under hogging.' : '.'}
               </div>
             </div>
 
@@ -228,7 +251,8 @@ export default function ResultsPanel({ results }) {
                   <th>
                     A<sub>s</sub> (in&sup2;)
                   </th>
-                  <th>d (in)</th>
+                  <th>d from top (in)</th>
+                  {hog && <th>d from comp. face (in)</th>}
                   <th>
                     f<sub>se</sub> (ksi)
                   </th>
@@ -247,7 +271,8 @@ export default function ResultsPanel({ results }) {
                     <td>{idx + 1}</td>
                     <td>{lr.name || lr.steel?.name}</td>
                     <td>{lr.area.toFixed(3)}</td>
-                    <td>{lr.depth.toFixed(2)}</td>
+                    <td>{dFromTop(lr).toFixed(2)}</td>
+                    {hog && <td>{lr.depth.toFixed(2)}</td>}
                     <td>{(lr.fse || 0).toFixed(1)}</td>
                     <td>{lr.strain.toFixed(6)}</td>
                     <td>{lr.stress.toFixed(2)}</td>
@@ -255,8 +280,8 @@ export default function ResultsPanel({ results }) {
                   </tr>
                 ))}
                 <tr className="totals-row">
-                  <td colSpan="7" style={{ textAlign: 'right' }}>
-                    Total Steel Force
+                  <td colSpan={hog ? 8 : 7} style={{ textAlign: 'right' }}>
+                    Total Bonded Steel Force
                   </td>
                   <td>
                     {layerResults.reduce((sum, lr) => sum + lr.force, 0).toFixed(2)} kips
@@ -284,11 +309,11 @@ export default function ResultsPanel({ results }) {
                   <td>{cracking.sectionProps.Ig.toFixed(1)} in&#x2074;</td>
                 </tr>
                 <tr>
-                  <td>Section modulus (bottom), S<sub>b</sub></td>
+                  <td>Section modulus, tension face ({hog ? 'top' : 'bottom'}), S<sub>b</sub></td>
                   <td>{cracking.sectionProps.Sb.toFixed(2)} in&sup3;</td>
                 </tr>
                 <tr>
-                  <td>Centroid depth, y&#x0304;<sub>cg</sub></td>
+                  <td>Centroid depth from the compression face, y&#x0304;<sub>cg</sub></td>
                   <td>{cracking.sectionProps.yCg.toFixed(3)} in</td>
                 </tr>
                 <tr>
@@ -313,12 +338,12 @@ export default function ResultsPanel({ results }) {
                   <td>{cracking.fr.toFixed(4)} ksi</td>
                 </tr>
                 <tr>
-                  <td>Cracking moment, M<sub>cr</sub></td>
+                  <td>Cracking moment, M<sub>cr</sub> ({hog ? 'top' : 'bottom'} fiber)</td>
                   <td>{cracking.McrFt.toFixed(1)} kip-ft</td>
                 </tr>
                 <tr>
                   <td>1.2 M<sub>cr</sub></td>
-                  <td>{cracking.thresholdFt.toFixed(1)} kip-ft</td>
+                  <td>{(cracking.Mcr12 / 12).toFixed(1)} kip-ft</td>
                 </tr>
               </tbody>
             </table>
@@ -369,39 +394,198 @@ export default function ResultsPanel({ results }) {
                   {cracking.Mcr.toFixed(1)} kip-in = {cracking.McrFt.toFixed(1)} kip-ft
                 </div>
               </div>
-              <div className="formula-block">
-                <div className="formula-title">
-                  Minimum Flexural Strength (ACI 318 &sect;9.6.1.3):
-                </div>
-                <div className="formula">
-                  <span className="formula-lhs">&#x03D5;M<sub>n</sub></span>{' '}
-                  &ge; min(1.2&#8239;M<sub>cr</sub>, 1.33&#8239;M<sub>u</sub>)
-                </div>
-                <div className="formula">
-                  1.2&#8239;M<sub>cr</sub> = {(cracking.Mcr12Ft ?? cracking.thresholdFt).toFixed(1)} kip-ft
-                  {cracking.Mu > 0 && (
-                    <>
-                      {' '}&nbsp;|&nbsp; 1.33&#8239;M<sub>u</sub> = {cracking.Mu133Ft.toFixed(1)} kip-ft
-                      {' '}&nbsp;&rarr;&nbsp; governing: {cracking.governs}
-                    </>
-                  )}
-                </div>
-                <div className="formula">
-                  {phiMnFt.toFixed(1)} kip-ft{' '}
-                  {cracking.passesMinStrength ? '\u2265' : '<'}{' '}
-                  {cracking.thresholdFt.toFixed(1)} kip-ft
-                </div>
-                <div className={`cracking-check ${cracking.passesMinStrength ? 'check-pass' : 'check-fail'}`}>
-                  {cracking.passesMinStrength
-                    ? `\u2713 OK \u2014 \u03D5Mn \u2265 ${cracking.governs}`
-                    : `\u2717 FAILS \u2014 \u03D5Mn < ${cracking.governs}`}
-                </div>
-              </div>
+              {ms && <MinimumStrength ms={ms} phiMnFt={phiMnFt} />}
             </div>
           </div>
         </CollapsibleSection>
       )}
 
+      {/* Unbonded tendons (ACI 318-19 20.3.2.4) */}
+      {tendonResults.length > 0 && (
+        <CollapsibleSection title="Unbonded Tendons" id="unbonded">
+          <UnbondedDetails tendons={tendonResults} basis={fpsBasis} minBonded={minBonded} dFromTop={dFromTop} />
+        </CollapsibleSection>
+      )}
+
+      {/* Service stresses (ACI 318-19 24.5) */}
+      {service && (
+        <CollapsibleSection title="Service Stresses" id="service">
+          <ServiceDetails service={service} />
+        </CollapsibleSection>
+      )}
+
+    </div>
+  );
+}
+
+const STATUS_TEXT = {
+  pass: '\u2713 OK \u2014 \u03D5Mn \u2265 1.2Mcr',
+  fail: '\u2717 FAILS \u2014 \u03D5Mn < 1.2Mcr and the 9.6.2.2 waiver is not met',
+  'waiver-flexure-met-confirm-shear': '\u26A0 \u03D5Mn < 1.2Mcr, but \u03D5Mn \u2265 2Mu: waived by 9.6.2.2 only if \u03D5Vn \u2265 2Vu',
+  precracked: '\u26A0 Mcr \u2264 0: tension face precracked by prestress. Engineering judgment, not a pass.',
+};
+
+/** ACI 318-19 minimum flexural strength, from analyzeSection's minStrengthACI. */
+function MinimumStrength({ ms, phiMnFt }) {
+  if (!ms.applies) {
+    return (
+      <div className="formula-block">
+        <div className="formula-title">Minimum Flexural Strength ({ms.provision}):</div>
+        <div className="formula-note">{ms.note}</div>
+      </div>
+    );
+  }
+  const tone = ms.status === 'pass' ? 'check-pass' : ms.status === 'fail' ? 'check-fail' : 'check-warn';
+  return (
+    <div className="formula-block">
+      <div className="formula-title">Minimum Flexural Strength (ACI 318-19 &sect;9.6.2.1):</div>
+      <div className="formula">
+        <span className="formula-lhs">&#x03D5;M<sub>n</sub></span>{' '}
+        &ge; 1.2&#8239;M<sub>cr</sub>
+        <span className="formula-note" style={{ display: 'inline', marginLeft: '0.75rem' }}>
+          (waived by &sect;9.6.2.2 where &#x03D5;M<sub>n</sub> &ge; 2M<sub>u</sub> and &#x03D5;V<sub>n</sub> &ge; 2V<sub>u</sub>)
+        </span>
+      </div>
+      <div className="formula">
+        {phiMnFt.toFixed(1)} kip-ft {ms.passes12Mcr ? '\u2265' : '<'} 1.2&#8239;M<sub>cr</sub> = {ms.Mcr12Ft.toFixed(1)} kip-ft
+        {ms.waiver.twoMuFt != null && (
+          <>
+            {' '}&nbsp;|&nbsp; 2&#8239;M<sub>u</sub> = {ms.waiver.twoMuFt.toFixed(1)} kip-ft
+          </>
+        )}
+      </div>
+      <div className={`cracking-check ${tone}`}>{STATUS_TEXT[ms.status]}</div>
+      {ms.note && <div className="formula-note">{ms.note}</div>}
+    </div>
+  );
+}
+
+function UnbondedDetails({ tendons, basis, minBonded, dFromTop }) {
+  const per = basis?.perTendon;
+  return (
+    <div className="result-details">
+      <div className="table-wrapper">
+        <table className="layer-table">
+          <thead>
+            <tr>
+              <th>Tendon</th>
+              <th>Type</th>
+              <th>A<sub>ps</sub> (in&sup2;)</th>
+              <th>d from top (in)</th>
+              <th>f<sub>se</sub> (ksi)</th>
+              <th>f<sub>ps</sub> (ksi)</th>
+              <th>Force (kips)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tendons.map((t, i) => (
+              <tr key={i} className="tension-row">
+                <td>U{i + 1}</td>
+                <td>{t.steel?.name}</td>
+                <td>{t.area.toFixed(3)}</td>
+                <td>{dFromTop(t).toFixed(2)}</td>
+                <td>{t.fse.toFixed(1)}</td>
+                <td>{t.stress.toFixed(2)}</td>
+                <td>{t.force.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {basis && (
+        <table className="detail-table">
+          <tbody>
+            <tr><td>f<sub>ps</sub> method</td><td>{basis.method}</td></tr>
+            <tr><td>Compression-face width for &rho;<sub>p</sub>, b</td><td>{basis.bComp.toFixed(2)} in</td></tr>
+            <tr><td>&rho;<sub>p</sub> = A<sub>ps</sub> / (b&#8239;d<sub>p</sub>)</td><td>{basis.rhoP.toFixed(6)}</td></tr>
+            {basis.spanToDepth != null && (
+              <tr><td>Span / depth, &#8467;/h</td><td>{basis.spanToDepth.toFixed(1)} ({per?.[0]?.row})</td></tr>
+            )}
+            {per?.map((r, i) => (
+              <tr key={i}>
+                <td>U{i + 1}: least of {r.equation}, f<sub>se</sub> + {r.slender ? 30 : 60}, f<sub>py</sub></td>
+                <td>
+                  {r.candidates.formula.toFixed(1)}, {r.candidates.fsePlus.toFixed(1)}, {r.candidates.fpy.toFixed(1)}
+                  {' '}&rarr; {r.fps.toFixed(1)} ksi ({r.governs})
+                </td>
+              </tr>
+            ))}
+            {basis.le != null && (
+              <tr><td>&#8467;<sub>e</sub> = 2&#8467;<sub>i</sub> / (2 + N<sub>s</sub>)</td><td>{basis.le.toFixed(1)} in</td></tr>
+            )}
+            {basis.fpsInput != null && (
+              <tr><td>Engineer-supplied f<sub>ps</sub></td><td>{basis.fpsInput} ksi{basis.cappedAtFpy ? ' (capped at fpy)' : ''}</td></tr>
+            )}
+          </tbody>
+        </table>
+      )}
+      {basis?.note && <p className="formula-note">{basis.note}</p>}
+      {minBonded && (
+        <div className="formula-block">
+          <div className="formula-title">Minimum Bonded Reinforcement (ACI 318-19 &sect;9.6.2.3):</div>
+          <div className="formula">
+            A<sub>s,min</sub> = 0.004&#8239;A<sub>ct</sub> = 0.004 &times; {minBonded.Act.toFixed(2)} = {minBonded.AsMin.toFixed(3)} in&sup2;
+          </div>
+          <div className="formula">
+            A<sub>s</sub> provided = {minBonded.AsProvided.toFixed(3)} in&sup2;
+          </div>
+          <div className={`cracking-check ${minBonded.pass ? 'check-pass' : 'check-fail'}`}>
+            {minBonded.pass ? '\u2713 OK' : '\u2717 FAILS'} &mdash; A<sub>s</sub> {minBonded.pass ? '\u2265' : '<'} A<sub>s,min</sub>
+          </div>
+          <div className="formula-note">{minBonded.note}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ServiceDetails({ service: sv }) {
+  const row = (label, f) => (
+    <tr>
+      <td>{label}</td>
+      <td>{f.top.toFixed(4)} ksi</td>
+      <td>{f.bottom.toFixed(4)} ksi</td>
+    </tr>
+  );
+  return (
+    <div className="result-details">
+      <div className="table-wrapper">
+        <table className="layer-table">
+          <thead>
+            <tr><th>Case</th><th>Top fiber</th><th>Bottom fiber</th></tr>
+          </thead>
+          <tbody>
+            {row('Total service', sv.total)}
+            {sv.sustained && row('Sustained', sv.sustained)}
+          </tbody>
+        </table>
+      </div>
+      <table className="detail-table">
+        <tbody>
+          <tr><td>Effective prestress, P (bonded + unbonded)</td><td>{sv.P.toFixed(2)} kips</td></tr>
+          <tr><td>Eccentricity, e</td><td>{sv.e.toFixed(3)} in</td></tr>
+          <tr><td>Extreme tension, f<sub>t</sub></td><td>{sv.ft.toFixed(4)} ksi</td></tr>
+          <tr>
+            <td>Class U / T limits (7.5&radic;f&#x2032;c, 12&radic;f&#x2032;c)</td>
+            <td>{sv.tensionLimits.U.toFixed(4)} / {sv.tensionLimits.T.toFixed(4)} ksi</td>
+          </tr>
+          <tr><td>Classification (&sect;24.5.2.1)</td><td>Class {sv.class}</td></tr>
+          <tr>
+            <td>Compression, total (&le; 0.60f&#x2032;c)</td>
+            <td>{sv.compression.total.toFixed(4)} / {sv.compression.limitTotal.toFixed(3)} ksi {sv.compression.passTotal ? '\u2713' : '\u2717'}</td>
+          </tr>
+          {sv.compression.sustained != null && (
+            <tr>
+              <td>Compression, sustained (&le; 0.45f&#x2032;c)</td>
+              <td>{sv.compression.sustained.toFixed(4)} / {sv.compression.limitSustained.toFixed(3)} ksi {sv.compression.passSustained ? '\u2713' : '\u2717'}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <p className="formula-note">
+        Compression negative, tension positive. {sv.classNote}
+        {sv.sustainedTensionNote && ` ${sv.sustainedTensionNote}`}
+      </p>
     </div>
   );
 }

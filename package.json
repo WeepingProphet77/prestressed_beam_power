@@ -9,8 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "skill:sync": "node skills/power-formula/sync-engine.mjs"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "jspdf": "^4.1.0",

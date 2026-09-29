@@ -1,6 +1,11 @@
 /**
  * Prestressed / Reinforced Concrete Beam Strength Calculator
- * Based on ACI 318 provisions and the Devalapura-Tadros (PCI) power formula.
+ *
+ * Based on ACI 318-19 provisions and the "power formula" for steel stress:
+ * introduced for prestressing steel by Skogman, Tadros & Grasmick (1988),
+ * fitting procedure after Mattock (1979), Gr. 270 low-relaxation constants
+ * recalibrated by Devalapura & Tadros (1992). Attribute the specific source
+ * of a specific constant; the method is not any one paper's alone.
  *
  * All units: ksi (stress), in (length), in² (area), kip (force), kip-in (moment)
  */
@@ -41,6 +46,13 @@ export function concreteModulus(fc) {
  * Strength reduction factor φ per ACI 318-19 §21.2
  * Based on net tensile strain in the extreme tension steel layer.
  * εty = fpy / Es  (yield strain of outermost tension steel)
+ *
+ * This is the 318-19 form using εty + 0.003, NOT the legacy fixed 0.005.
+ * Gr. 60 (εty = 0.002069) -> threshold 0.005069, near the familiar value;
+ * Gr. 270 strand (εty = 243/28500 = 0.0085263) -> 0.0115263, nowhere near it.
+ * Hardcoding 0.005 systematically over-predicts φ on prestressed sections.
+ * Note also that εty is derived from the steel table and therefore inherits
+ * any error in it — steelPresets.test.js validates the table.
  */
 export function phiFactor(epsilonT, epsilonTy) {
   if (epsilonT >= epsilonTy + 0.003) return 0.90;
@@ -51,9 +63,18 @@ export function phiFactor(epsilonT, epsilonTy) {
 // ─── Power formula ──────────────────────────────────────────────────────────
 
 /**
- * Devalapura-Tadros / PCI power formula for steel stress.
+ * Power formula for steel stress (PCI / Devalapura-Tadros form).
  *
  *   fs = Es·εs · [ Q + (1 − Q) / [1 + (Es·εs / (K·fpy))^R ]^(1/R) ]
+ *
+ * Identical to the published four-constant form
+ *   fps = εps·[ A + B / [1 + (C·εps)^D ]^(1/D) ]
+ * under Es = A+B, Q = A/Es, K = Es/(C·fpy), R = D. src/data/steelPresets.js
+ * stores A, B, C, D and derives the rest, so Es = A + B is enforced.
+ *
+ * Asymptotically fs -> Es·εs·Q + (1−Q)·K·fpy: slope Es·Q, intercept
+ * (1−Q)·K·fpy. Dropping the (1−Q) from that intercept is a 3% error on the
+ * strand asymptote and an easy slip when reading the equation quickly.
  *
  * The result is capped at:
  *   - fpy (yield) for mild steel (Grade 60, 65, 70)
@@ -478,7 +499,7 @@ export function analyzeBeam(section, steelLayers) {
   const cOverD = c / dt;
 
   // Prestress & cracking analysis. Mu (factored demand) is optional and, when
-  // supplied, enables the ACI 318-19 §9.6.1.3 1.33·Mu exception.
+  // supplied, feeds the legacy 1.33·Mu field (see prestressAndCracking) and the demand.
   const MuIn = (section.Mu || 0) * 12; // kip-ft → kip-in
   const cracking = prestressAndCracking(section, steelLayers, phiMn, MuIn);
 
@@ -825,9 +846,13 @@ export function prestressAndCracking(section, steelLayers, phiMn, Mu = 0) {
   const Mcr = Sb * (fr + P / A + P * e / Sb);
   const McrFt = Mcr / 12;
 
-  // Minimum flexural strength, ACI 318-19 §9.6.1.3: φMn must be at least the
-  // lesser of 1.2·Mcr and 1.33·Mu (the 1.33·Mu relief applies only when a
-  // factored demand Mu is supplied).
+  // LEGACY minimum-strength fields: "lesser of 1.2·Mcr and 1.33·Mu". This was
+  // long labeled ACI 318-19 §9.6.1.3, which is wrong on two counts: 9.6.1.3 is
+  // the nonprestressed 4/3·As waiver, and the 1.33·Mu relief is an AASHTO LRFD
+  // form that ACI 318-19 does not carry. The app does not report these fields;
+  // it reports aciMinimumStrength() from direction.js (9.6.2.1 / 9.6.2.2).
+  // They are kept, unchanged, so this engine stays numerically identical to the
+  // power-formula skill's copy of it.
   const Mcr12 = 1.2 * Mcr;
   const Mu133 = 1.33 * Mu;
   const useMuRelief = Mu > 0 && Mu133 < Mcr12;

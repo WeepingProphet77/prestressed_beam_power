@@ -9,8 +9,15 @@ export default function BeamDiagram({ section, results }) {
   const roles = useUiStyle().roles;
   if (!section || !results) return null;
 
-  const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb, numStems, stemWidth, numVoids, voidDiameter, points, holes } = section;
+  // Hogging results are solved on the section rotated 180 degrees, so c, a and
+  // every layer depth are measured from the member bottom. Draw that analysis
+  // frame, then mirror the geometry group back so the member appears the right
+  // way up. Labels are placed with toY() and are never mirrored.
+  const hog = results.direction === 'hog' && !!results.analysisSection;
+  const geo = hog ? results.analysisSection : section;
+  const { bf, bw, hf, h, sectionType, bt, ht, hg, bb, hb, numStems, stemWidth, numVoids, voidDiameter, points, holes } = geo;
   const { c, a, layerResults } = results;
+  const tendonResults = results.tendonResults || [];
 
   // Drawing scale
   const padding = 40;
@@ -31,12 +38,16 @@ export default function BeamDiagram({ section, results }) {
   const drawH = h * scale;
   const svgW = drawW + padding * 2 + 180;
   // Extra headroom below the section so the two-line legend clears the viewBox
-  const svgH = drawH + padding * 2 + 18;
+  const svgH = drawH + padding * 2 + 18 + (results.direction === 'hog' ? 16 : 0);
 
   const ox = padding + 60; // origin x (left edge of beam)
   const oy = padding;      // origin y (top of beam)
 
   const isT = sectionType === 'tbeam' && hf > 0 && bf > bw;
+
+  // Analysis-frame depth -> screen y in the member's real orientation.
+  const toY = (d) => (hog ? oy + drawH - d * scale : oy + d * scale);
+  const mirror = hog ? `translate(0 ${2 * oy + drawH}) scale(1 -1)` : undefined;
 
   // Helper: build an SVG path string for a polygon ring (custom sections).
   const ringPath = (ring) =>
@@ -319,7 +330,7 @@ export default function BeamDiagram({ section, results }) {
     `;
   }
 
-  // Neutral axis y position
+  // Neutral axis y position (analysis frame; the mirror group flips it)
   const naY = oy + c * scale;
   const beamCenterX = isCustom ? ox + drawW / 2 :
                       (isSandwich ? ox + drawW / 2 :
@@ -356,6 +367,7 @@ export default function BeamDiagram({ section, results }) {
           )}
         </defs>
 
+        <g transform={mirror}>
         {/* Concrete body */}
         <path
           d={outlinePath}
@@ -409,14 +421,6 @@ export default function BeamDiagram({ section, results }) {
           strokeWidth="1.3"
           strokeDasharray="7,4"
         />
-        <text x={annotX} y={naY + 4} className="diagram-label na-label">
-          c = {c.toFixed(2)}&quot;
-        </text>
-
-        {/* Stress block depth annotation */}
-        <text x={annotX} y={oy + aH / 2 + 4} className="diagram-label a-label">
-          a = {a.toFixed(2)}&quot;
-        </text>
 
         {/* Steel layers */}
         {layerResults.map((lr, idx) => {
@@ -448,13 +452,58 @@ export default function BeamDiagram({ section, results }) {
  data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
                 strokeWidth="1"
               />
-              {/* Label */}
-              <text x={annotX} y={ly + 4} className="diagram-label steel-label">
-                d={lr.depth.toFixed(2)}&quot; | f<tspan baselineShift="sub" fontSize="10">s</tspan>={lr.stress.toFixed(1)} ksi
-              </text>
             </g>
           );
         })}
+
+        {/* Unbonded tendons: a strand inside an open duct ring */}
+        {tendonResults.map((tr, idx) => {
+          const ty = oy + tr.depth * scale;
+          const dotR = Math.min(5, Math.max(2.5, Math.sqrt(tr.area) * 3));
+          return (
+            <g key={`t${idx}`}>
+              <circle
+                cx={beamCenterX}
+                cy={ty}
+                r={dotR + 3}
+                fill="none"
+                data-stroke-role="tensionSteel" stroke={roles.tensionSteel.color}
+                strokeWidth="1.2"
+                strokeDasharray="2,2"
+              />
+              <circle
+                cx={beamCenterX}
+                cy={ty}
+                r={dotR}
+                data-fill-role="tensionSteel" fill={roles.tensionSteel.color}
+                data-stroke-role="dotStroke" stroke={roles.dotStroke.color}
+                strokeWidth="1"
+              />
+            </g>
+          );
+        })}
+        </g>
+
+        <text x={annotX} y={toY(c) + 4} className="diagram-label na-label">
+          c = {c.toFixed(2)}&quot;
+        </text>
+
+        {/* Stress block depth annotation */}
+        <text x={annotX} y={toY(a / 2) + 4} className="diagram-label a-label">
+          a = {a.toFixed(2)}&quot;
+        </text>
+
+        {/* Steel and tendon labels, depths as drawn (from the member top) */}
+        {layerResults.map((lr, idx) => (
+          <text key={idx} x={annotX} y={toY(lr.depth) + 4} className="diagram-label steel-label">
+            d={(lr.depthFromTop ?? lr.depth).toFixed(2)}&quot; | f<tspan baselineShift="sub" fontSize="10">s</tspan>={lr.stress.toFixed(1)} ksi
+          </text>
+        ))}
+        {tendonResults.map((tr, idx) => (
+          <text key={`t${idx}`} x={annotX} y={toY(tr.depth) + 4} className="diagram-label steel-label">
+            d={(tr.depthFromTop ?? tr.depth).toFixed(2)}&quot; | f<tspan baselineShift="sub" fontSize="10">ps</tspan>={tr.stress.toFixed(1)} ksi
+          </text>
+        ))}
 
         {/* Dimension: total depth */}
         <line x1={ox - 25} y1={oy} x2={ox - 25} y2={oy + drawH} data-stroke-role="axis" stroke={roles.axis.color} strokeWidth="1" strokeDasharray="3,3" />
@@ -483,6 +532,11 @@ export default function BeamDiagram({ section, results }) {
           <text x="15" y="9" className="diagram-label legend-text">Whitney stress block (0.85f&#x2032;c)</text>
           <line x1="0" y1="21" x2="10" y2="21" data-stroke-role="neutralAxis" stroke={roles.neutralAxis.color} strokeWidth="1.5" strokeDasharray="4,2" />
           <text x="15" y="24" className="diagram-label legend-text">Neutral axis</text>
+          {hog && (
+            <text x="0" y="39" className="diagram-label legend-text">
+              Hogging: top in tension, compression at the bottom
+            </text>
+          )}
         </g>
       </svg>
 

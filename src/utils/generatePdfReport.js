@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { printSpecFor, printTextColor, PRINT_FONT, ensureContrastOnWhite } from '../styles/printSpec';
+import { extremeBonded } from './format';
 
 // ─── Greek / math text helpers ───────────────────────────────────────────────
 
@@ -12,6 +13,7 @@ const GREEK = {
   '\u03B2': 'b', // β
   '\u03B3': 'g', // γ
   '\u03B4': 'd', // δ
+  '\u0394': 'D', // Δ
   '\u03B5': 'e', // ε
   '\u03B6': 'z', // ζ
   '\u03B7': 'h', // η
@@ -242,7 +244,11 @@ export default async function generatePdfReport(results, section, info) {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(...slate400);
-  doc.text(`Section Type: ${sectionNames[section.sectionType] || section.sectionType}`, MG, y);
+  const hog = results.direction === 'hog';
+  const directionText = results.direction
+    ? `  |  Moment: ${hog ? 'Hogging (negative), top in tension' : 'Sagging (positive), bottom in tension'}`
+    : '';
+  doc.text(`Section Type: ${sectionNames[section.sectionType] || section.sectionType}${directionText}`, MG, y);
   y += 16;
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -341,6 +347,76 @@ export default async function generatePdfReport(results, section, info) {
     y += 20;
   };
 
+  // ── Small note, wrapped to the content width ──
+  const drawNote = (text) => {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(...slate600);
+    for (const line of doc.splitTextToSize(sanitize(text), cw - 8)) {
+      ensureSpace(10);
+      doc.text(line, MG + 4, y + 7);
+      y += 9;
+    }
+  };
+
+  // ── Label / value rows, zebra striped, value wrapped on the right ──
+  const drawKeyValueRows = (rows) => {
+    rows.forEach(([label, value], i) => {
+      doc.setFontSize(8.5);
+      const vLines = doc.splitTextToSize(sanitize(String(value)), cw * 0.5);
+      const lLines = doc.splitTextToSize(sanitize(label), cw * 0.46);
+      const h = Math.max(18, 8 + 10 * Math.max(vLines.length, lLines.length));
+      ensureSpace(h);
+      if (i % 2 === 0) {
+        doc.setFillColor(...slate100);
+        doc.rect(MG, y, cw, h, 'F');
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...slate600);
+      lLines.forEach((l, j) => doc.text(l, MG + 8, y + 12.5 + j * 10));
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...slate800);
+      vLines.forEach((l, j) => doc.text(l, MG + cw - 8, y + 12.5 + j * 10, { align: 'right' }));
+      y += h;
+    });
+    doc.setDrawColor(...slate200);
+    doc.line(MG, y, MG + cw, y);
+    y += 4;
+  };
+
+  // ── Plain table: header row plus data rows; first column left-aligned ──
+  const drawSimpleTable = (headers, widths, rows) => {
+    const ws = widths.map((w) => w * cw);
+    const cellX = (i) => MG + ws.slice(0, i).reduce((a, b) => a + b, 0);
+    const put = (txt, i, ty) => {
+      if (i <= 1) doc.text(txt, cellX(i) + 6, ty);
+      else doc.text(txt, cellX(i) + ws[i] - 6, ty, { align: 'right' });
+    };
+    ensureSpace(22);
+    doc.setFillColor(...slate200);
+    doc.rect(MG, y, cw, 20, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...slate600);
+    headers.forEach((h, i) => put(h, i, y + 13));
+    y += 20;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...slate800);
+    rows.forEach((r, k) => {
+      ensureSpace(19);
+      if (k % 2 === 1) {
+        doc.setFillColor(...slate100);
+        doc.rect(MG, y, cw, 19, 'F');
+      }
+      r.forEach((c, i) => put(sanitize(String(c)), i, y + 13));
+      y += 19;
+    });
+    doc.setDrawColor(...slate200);
+    doc.line(MG, y, MG + cw, y);
+    y += 6;
+  };
+
   // ═════════════════════════════════════════════════════════════════════════
   // SECTION FLEXURAL STRENGTH
   // ═════════════════════════════════════════════════════════════════════════
@@ -351,13 +427,10 @@ export default async function generatePdfReport(results, section, info) {
   const tblRight = MG + cw;
   const rowH = 20;
 
-  // Find extreme tension layer for evaluated formula display
-  let extremeLayer = results.layerResults[0];
-  for (const lr of results.layerResults) {
-    if (lr.depth > extremeLayer.depth) extremeLayer = lr;
-  }
-  const etl = extremeLayer;
-  const epsilonTy = etl ? etl.steel.fpy / etl.steel.Es : 0.002;
+  // Deepest bonded layer, for the evaluated power-formula and strain equations
+  const etl = extremeBonded(results);
+  const epsilonTy = results.epsilonTy ?? 0.002;
+  const dFromTop = (r) => r.depthFromTop ?? r.depth;
 
   // Data table rows
   const detailData = [
@@ -374,7 +447,7 @@ export default async function generatePdfReport(results, section, info) {
       value: results.beta1.toFixed(3),
     },
     {
-      label: (lx, ly) => { doc.text('Neutral axis depth, c', lx, ly); },
+      label: (lx, ly) => { doc.text(`Neutral axis depth, c${hog ? ' (from the bottom face)' : ''}`, lx, ly); },
       value: `${results.c.toFixed(3)} in`,
     },
     {
@@ -422,6 +495,10 @@ export default async function generatePdfReport(results, section, info) {
         doc.text('Yield strain, ', lx, ly);
         cx2 += doc.getTextWidth('Yield strain, ');
         cx2 += drawSub(doc, '\u03B5', 'ty', cx2, ly);
+        if (results.phiBasis?.startsWith('unbonded')) {
+          doc.text(' (ACI 318-19 Sec. 21.2.2.1, unbonded tendon governs)', cx2, ly);
+          return;
+        }
         doc.text(' = ', cx2, ly); cx2 += doc.getTextWidth(' = ');
         cx2 += drawSub(doc, 'f', 'py', cx2, ly);
         doc.text(' / ', cx2, ly); cx2 += doc.getTextWidth(' / ');
@@ -566,7 +643,11 @@ export default async function generatePdfReport(results, section, info) {
       doc.text(`= 0.003\u00B7(${etl.depth.toFixed(2)} / ${results.c.toFixed(3)} - 1) + ${(etl.fse || 0).toFixed(1)} / ${etl.steel.Es.toLocaleString()} + ${(etl.epsDecomp || 0).toFixed(6)} = ${etl.strain.toFixed(6)}`, ex, ey);
     }, 26);
   }
-  drawFlexNote('\u03B5cu = 0.003 per ACI 318; \u0394\u03B5decomp = concrete decompression strain (bonded prestress only)', 38);
+  drawFlexNote(
+    '\u03B5cu = 0.003 per ACI 318; \u0394\u03B5decomp = concrete decompression strain (bonded prestress only); '
+      + `di and c from the compression face${hog ? ' (member bottom)' : ''}`,
+    38,
+  );
   ffy += ffGap;
 
   // Formula 3: Whitney Stress Block
@@ -690,7 +771,7 @@ export default async function generatePdfReport(results, section, info) {
       `${idx + 1}`,
       lr.name || lr.steel?.name || '',
       lr.area.toFixed(3),
-      lr.depth.toFixed(2),
+      dFromTop(lr).toFixed(2),
       (lr.fse || 0).toFixed(1),
       lr.strain.toFixed(6),
       lr.stress.toFixed(2),
@@ -728,9 +809,54 @@ export default async function generatePdfReport(results, section, info) {
   doc.setFontSize(8.5);
   doc.setTextColor(...slate800);
   const totalForce = layerResults.reduce((s, lr) => s + lr.force, 0);
-  doc.text('Total Steel Force', tblRight - colWidths[colWidths.length - 1] - 8, y + 13, { align: 'right' });
+  doc.text('Total Bonded Steel Force', tblRight - colWidths[colWidths.length - 1] - 8, y + 13, { align: 'right' });
   doc.text(`${totalForce.toFixed(2)} kips`, tblRight - 6, y + 13, { align: 'right' });
-  y += 28;
+  y += 24;
+  drawNote('d is measured from the member top, as drawn.');
+  y += 6;
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // UNBONDED TENDONS
+  // ═════════════════════════════════════════════════════════════════════════
+
+  const tendonResults = results.tendonResults || [];
+  if (tendonResults.length) {
+    drawSectionHeading('Unbonded Tendons');
+    drawSimpleTable(
+      ['Tendon', 'Type', 'Aps (in2)', 'd (in)', 'fse (ksi)', 'fps (ksi)', 'Force (kips)'],
+      [0.08, 0.26, 0.12, 0.1, 0.12, 0.14, 0.18],
+      tendonResults.map((t, i) => [
+        `U${i + 1}`, t.steel?.name || '', t.area.toFixed(3), dFromTop(t).toFixed(2),
+        t.fse.toFixed(1), t.stress.toFixed(2), t.force.toFixed(2),
+      ]),
+    );
+    const fb = results.fpsBasis;
+    if (fb) {
+      const rows = [
+        ['fps method', fb.method],
+        ['Compression-face width for rho_p, b', `${fb.bComp.toFixed(2)} in`],
+        ['rho_p = Aps / (b dp)', fb.rhoP.toFixed(6)],
+      ];
+      if (fb.spanToDepth != null) rows.push(['Span / depth, l/h', `${fb.spanToDepth.toFixed(1)} (${fb.perTendon[0].row})`]);
+      (fb.perTendon || []).forEach((r, i) => rows.push([
+        `U${i + 1}: least of ${r.equation}, fse + ${r.slender ? 30 : 60}, fpy`,
+        `${r.candidates.formula.toFixed(1)}, ${r.candidates.fsePlus.toFixed(1)}, ${r.candidates.fpy.toFixed(1)} -> ${r.fps.toFixed(1)} ksi (${r.governs})`,
+      ]));
+      if (fb.le != null) rows.push(['le = 2 li / (2 + Ns)', `${fb.le.toFixed(1)} in`]);
+      if (fb.fpsInput != null) rows.push(['Engineer-supplied fps', `${fb.fpsInput} ksi${fb.cappedAtFpy ? ' (capped at fpy)' : ''}`]);
+      drawKeyValueRows(rows);
+      if (fb.note) drawNote(fb.note);
+    }
+    const mb = results.minBondedReinforcement;
+    if (mb) {
+      drawKeyValueRows([
+        ['Minimum bonded reinforcement, ACI 318-19 Sec. 9.6.2.3',
+          `As = ${mb.AsProvided.toFixed(3)} ${mb.pass ? '>=' : '<'} 0.004 Act = 0.004 x ${mb.Act.toFixed(2)} = ${mb.AsMin.toFixed(3)} in2  ${mb.pass ? 'OK' : 'FAILS'}`],
+      ]);
+      drawNote(mb.note);
+    }
+    y += 8;
+  }
 
   // ═════════════════════════════════════════════════════════════════════════
   // PRESTRESS & CRACKING ANALYSIS
@@ -766,8 +892,9 @@ export default async function generatePdfReport(results, section, info) {
       },
       {
         label: (lx, ly) => {
-          doc.text('Section modulus (bottom), ', lx, ly);
-          const w = doc.getTextWidth('Section modulus (bottom), ');
+          const t = `Section modulus (tension face, ${hog ? 'top' : 'bottom'}), `;
+          doc.text(t, lx, ly);
+          const w = doc.getTextWidth(t);
           drawSub(doc, 'S', 'b', lx + w, ly);
         },
         value: `${sp.Sb.toFixed(2)} in\u00B3`,
@@ -810,7 +937,8 @@ export default async function generatePdfReport(results, section, info) {
         label: (lx, ly) => {
           doc.text('Cracking moment, ', lx, ly);
           const w = doc.getTextWidth('Cracking moment, ');
-          drawSub(doc, 'M', 'cr', lx + w, ly);
+          const w2 = drawSub(doc, 'M', 'cr', lx + w, ly);
+          doc.text(` (${hog ? 'top' : 'bottom'} fiber)`, lx + w + w2, ly);
         },
         value: `${cr.McrFt.toFixed(1)} kip-ft`,
       },
@@ -821,7 +949,7 @@ export default async function generatePdfReport(results, section, info) {
           px += doc.getTextWidth('1.2 ');
           drawSub(doc, 'M', 'cr', px, ly);
         },
-        value: `${(cr.Mcr12Ft ?? cr.thresholdFt).toFixed(1)} kip-ft`,
+        value: `${(cr.Mcr12 / 12).toFixed(1)} kip-ft`,
       },
     ];
 
@@ -851,7 +979,9 @@ export default async function generatePdfReport(results, section, info) {
     y += 10;
 
     // Equation block for prestress & cracking
-    const crEqH = 142;
+    const ms = results.minStrengthACI;
+    const msNote = ms?.note ? doc.splitTextToSize(sanitize(ms.note), cw - 30) : [];
+    const crEqH = 142 + msNote.length * 9;
     ensureSpace(crEqH + 10);
     doc.setFillColor(...slate100);
     doc.setDrawColor(...slate200);
@@ -940,34 +1070,69 @@ export default async function generatePdfReport(results, section, info) {
     });
     cry += crGap;
 
-    // Equation 4: minimum-strength check (lesser of 1.2Mcr and 1.33Mu)
-    drawCrFormulaTitle('Minimum Flexural Strength (ACI 318 Sec. 9.6.1.3):');
-    drawCrFormulaExpr((ex, ey) => {
-      let px = ex;
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...blueLabel);
-      px += drawGreek(doc, '\u03D5', px, ey);
-      px += drawSub(doc, 'M', 'n', px, ey);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...slate800);
-      const reqLabel = cr.Mu > 0 ? ` >= min(1.2Mcr, 1.33Mu) [${cr.governs}] ` : ' >= 1.2 Mcr ';
-      doc.text(reqLabel, px, ey); px += doc.getTextWidth(reqLabel);
-      doc.text(`     ${phiMnFt.toFixed(1)}`, px, ey); px += doc.getTextWidth(`     ${phiMnFt.toFixed(1)}`);
-      doc.text(` ${cr.passesMinStrength ? '>=' : '<'} ${cr.thresholdFt.toFixed(1)} kip-ft`, px, ey);
-      px += doc.getTextWidth(` ${cr.passesMinStrength ? '>=' : '<'} ${cr.thresholdFt.toFixed(1)} kip-ft`);
-      doc.text('  ', px, ey); px += doc.getTextWidth('  ');
-      if (cr.passesMinStrength) {
-        doc.setTextColor(...green600);
-        doc.setFont('helvetica', 'bold');
-        doc.text('OK', px, ey);
-      } else {
-        doc.setTextColor(...red600);
-        doc.setFont('helvetica', 'bold');
-        doc.text('FAILS', px, ey);
+    // Equation 4: ACI 318-19 minimum flexural strength (9.6.2.1 / 9.6.2.2)
+    if (ms) {
+      drawCrFormulaTitle(`Minimum Flexural Strength (${ms.applies ? 'ACI 318-19 Sec. 9.6.2.1' : ms.provision.replace(/§/g, 'Sec. ')}):`);
+      if (ms.applies) {
+        drawCrFormulaExpr((ex, ey) => {
+          let px = ex;
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...blueLabel);
+          px += drawGreek(doc, '\u03D5', px, ey);
+          px += drawSub(doc, 'M', 'n', px, ey);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...slate800);
+          const txt = ` >= 1.2 Mcr      ${phiMnFt.toFixed(1)} ${ms.passes12Mcr ? '>=' : '<'} ${ms.Mcr12Ft.toFixed(1)} kip-ft`
+            + (ms.waiver.twoMuFt != null ? `   |   2Mu = ${ms.waiver.twoMuFt.toFixed(1)} kip-ft` : '');
+          doc.text(txt, px, ey); px += doc.getTextWidth(txt) + 8;
+          const verdict = {
+            pass: ['OK', green600],
+            fail: ['FAILS', red600],
+            'waiver-flexure-met-confirm-shear': ['WAIVED BY 9.6.2.2 IF phiVn >= 2Vu', amber600],
+            precracked: ['PRECRACKED: ENGINEERING JUDGMENT', amber600],
+          }[ms.status];
+          doc.setTextColor(...verdict[1]);
+          doc.setFont('helvetica', 'bold');
+          doc.text(verdict[0], px, ey);
+        });
       }
-    });
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(...slate600);
+      msNote.forEach((line, i) => doc.text(line, crx0 + 8, cry + (ms.applies ? 26 : 14) + i * 9));
+    }
 
     y += crEqH + 16;
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // SERVICE STRESSES
+  // ═════════════════════════════════════════════════════════════════════════
+
+  if (results.service) {
+    const sv = results.service;
+    drawSectionHeading('Service Stresses (ACI 318-19 Sec. 24.5)');
+    const rowsSv = [['Total service', sv.total]];
+    if (sv.sustained) rowsSv.push(['Sustained', sv.sustained]);
+    drawSimpleTable(
+      ['Case', 'Top fiber (ksi)', 'Bottom fiber (ksi)'],
+      [0.4, 0.3, 0.3],
+      rowsSv.map(([n, f]) => [n, f.top.toFixed(4), f.bottom.toFixed(4)]),
+    );
+    const kv = [
+      ['Effective prestress, P (bonded + unbonded)', `${sv.P.toFixed(2)} kips`],
+      ['Eccentricity, e', `${sv.e.toFixed(3)} in`],
+      ['Extreme tension, ft', `${sv.ft.toFixed(4)} ksi`],
+      ['Class U / T limits (7.5 sqrt(f\'c), 12 sqrt(f\'c))', `${sv.tensionLimits.U.toFixed(4)} / ${sv.tensionLimits.T.toFixed(4)} ksi`],
+      ['Classification (Sec. 24.5.2.1)', `Class ${sv.class}`],
+      ['Compression, total (<= 0.60 f\'c)', `${sv.compression.total.toFixed(4)} / ${sv.compression.limitTotal.toFixed(3)} ksi  ${sv.compression.passTotal ? 'OK' : 'FAILS'}`],
+    ];
+    if (sv.compression.sustained != null) {
+      kv.push(['Compression, sustained (<= 0.45 f\'c)', `${sv.compression.sustained.toFixed(4)} / ${sv.compression.limitSustained.toFixed(3)} ksi  ${sv.compression.passSustained ? 'OK' : 'FAILS'}`]);
+    }
+    drawKeyValueRows(kv);
+    drawNote(`Compression negative, tension positive. ${sv.classNote}${sv.sustainedTensionNote ? ` ${sv.sustainedTensionNote}` : ''}`);
+    y += 8;
   }
 
   // ═════════════════════════════════════════════════════════════════════════

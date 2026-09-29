@@ -95,8 +95,8 @@ describe('grossSectionProperties (rectangular)', () => {
 describe('steelStrain components', () => {
   it('adds flexural + prestrain + decompression', () => {
     // d=20, c=5 -> flexural = 0.003*(20/5 - 1) = 0.009
-    const eps = steelStrain(20, 5, 174, 28800, 0.0005);
-    expect(eps).toBeCloseTo(0.009 + 174 / 28800 + 0.0005, 8);
+    const eps = steelStrain(20, 5, 174, 28500, 0.0005);
+    expect(eps).toBeCloseTo(0.009 + 174 / 28500 + 0.0005, 8);
   });
 });
 

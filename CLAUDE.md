@@ -14,13 +14,35 @@ under ACI 318-19, and exports a PDF calculation report.
 | --- | --- |
 | Dev server | `npm run dev` |
 | Production build | `npm run build` |
-| Tests | `npm test` (vitest, 98 tests) |
+| Tests | `npm test` (vitest, 146 tests) |
 | Lint | `npx eslint src/` |
 
 CI (`.github/workflows/deploy.yml`) runs **only on push to `main`** and only does
 `npm ci && npm run build` before deploying to GitHub Pages. **Nothing runs on pull
 requests** — an empty checks list on a PR is expected, not a failure. Tests and
 lint are not in CI, so run them locally before pushing.
+
+**The power-formula skill is maintained separately.** This repo used to carry a
+copy under `skills/`; it no longer does. The skill's engine is the methodology
+reference: when it changes, port the change here by hand and re-run the tests
+(`steelPresets.test.js` checks the steel table against the published design aid,
+`analyzeSection.test.js` carries the skill's worked examples).
+
+## Engineering conventions (ported from the skill, v1.2)
+
+- **Depths are always entered from the member top, as drawn**, in sag and hog.
+  `direction.js` flips the section for hog; never pre-flip in the UI. Results in
+  hog carry `analysisSection`, and `c`, `a` and each layer `depth` are measured
+  from the member bottom; `depthFromTop` gives the drawn depth.
+- **`section.Mu` is signed** (+ sag, - hog) at the engine boundary. The form takes
+  |Mu| and a direction and signs it.
+- **Minimum strength is `result.minStrengthACI`** (9.6.2.1 / 9.6.2.2). The
+  engine's `cracking.governs` / `passesMinStrength` / `threshold` are the legacy
+  "lesser of 1.2Mcr and 1.33Mu" form, kept only so the engine stays numerically
+  identical to the skill's copy. Do not display them.
+- **`steelPresets.test.js` is the only test that fails on a bad constant.** A
+  near-cap strand stress barely moves when the curve is wrong. Never widen its
+  0.1 ksi design-aid tolerance.
 
 ## Architecture
 
@@ -40,9 +62,12 @@ src/
     starTrekHolo/          tokens, ornament, ambience for the one style
   components/              input form, diagrams, results panels
   utils/
-    beamCalculations.js    the analysis engine
+    analyzeSection.js      entry point: routes to the solvers, labels the result
+    beamCalculations.js    the analysis engine (power formula, strain compatibility)
+    direction.js           sag/hog by 180-degree flip; ACI 318-19 minimum strength
+    unbonded.js            unbonded PT (fps), 9.6.2.3 As,min, service stresses
     generatePdfReport.js   jsPDF report generator
-  data/steelPresets.js     steel grade parameters
+  data/steelPresets.js     steel grade parameters (published A, B, C, D)
 ```
 
 Four token scales, each defined per style with its own multiplier: **color**
@@ -53,7 +78,8 @@ Four token scales, each defined per style with its own multiplier: **color**
 ### Invariants
 
 **The calculation engine is not a styling surface.** `src/utils/beamCalculations.js`,
-`src/data/`, and `skills/` must not change for UI work. When a task is described as
+`src/utils/direction.js`, `src/utils/unbonded.js`, `src/utils/analyzeSection.js`
+and `src/data/` must not change for UI work. When a task is described as
 visual, the diff for those paths should be empty.
 
 **SVG cannot read CSS custom properties.** SVG presentation attributes (`fill`,
