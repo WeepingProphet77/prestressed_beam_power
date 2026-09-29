@@ -3,6 +3,7 @@
  * All calculation sections are collapsible (collapsed by default).
  */
 import { useState } from 'react';
+import { fmtConst } from '../utils/format';
 
 function CollapsibleSection({ title, id, children }) {
   const [open, setOpen] = useState(false);
@@ -135,7 +136,7 @@ export default function ResultsPanel({ results }) {
                   <div className="formula">
                     <span className="formula-lhs" style={{visibility: 'hidden'}}>f<sub>s</sub></span> ={' '}
                     {etl.steel.Es.toLocaleString()}&#8239;({etl.strain.toFixed(6)}){' '}
-                    [ {etl.steel.Q} + (1 &minus; {etl.steel.Q}) / [1 + ({etl.steel.Es.toLocaleString()} &times; {etl.strain.toFixed(6)} / {etl.steel.K} &times; {etl.steel.fpy})<sup>{etl.steel.R}</sup>]<sup>1/{etl.steel.R}</sup> ]
+                    [ {fmtConst(etl.steel.Q)} + (1 &minus; {fmtConst(etl.steel.Q)}) / [1 + ({etl.steel.Es.toLocaleString()} &times; {etl.strain.toFixed(6)} / {fmtConst(etl.steel.K)} &times; {etl.steel.fpy})<sup>{fmtConst(etl.steel.R)}</sup>]<sup>1/{fmtConst(etl.steel.R)}</sup> ]
                   </div>
                   <div className="formula">
                     <span className="formula-lhs" style={{visibility: 'hidden'}}>f<sub>s</sub></span> ={' '}

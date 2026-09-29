@@ -2,6 +2,7 @@ import { useState } from 'react';
 import steelPresets from '../data/steelPresets';
 import SectionDrawer from './SectionDrawer';
 import DxfImporter from './DxfImporter';
+import { fmtConst } from '../utils/format';
 
 const DEFAULT_SECTION = {
   sectionType: 'rectangular',
@@ -729,9 +730,9 @@ export default function BeamInputForm({ onCalculate }) {
                 <span style={{whiteSpace: 'nowrap'}}>E<sub>s</sub>={preset?.Es?.toLocaleString()} ksi</span>
                 <span style={{whiteSpace: 'nowrap'}}>f<sub>py</sub>={preset?.fpy} ksi</span>
                 <span style={{whiteSpace: 'nowrap'}}>f<sub>pu</sub>={preset?.fpu} ksi</span>
-                <span style={{whiteSpace: 'nowrap'}}>Q={preset?.Q}</span>
-                <span style={{whiteSpace: 'nowrap'}}>R={preset?.R}</span>
-                <span style={{whiteSpace: 'nowrap'}}>K={preset?.K}</span>
+                <span style={{whiteSpace: 'nowrap'}}>Q={fmtConst(preset?.Q)}</span>
+                <span style={{whiteSpace: 'nowrap'}}>R={fmtConst(preset?.R)}</span>
+                <span style={{whiteSpace: 'nowrap'}}>K={fmtConst(preset?.K)}</span>
               </div>
             </div>
           );
