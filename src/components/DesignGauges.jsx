@@ -4,6 +4,7 @@
  * indicating the current value.
  */
 import { useUiStyle } from '../styles/styleContext';
+import { extremeTension, minStrengthBadge } from '../utils/format';
 
 // Straight-line phi: ϕ (U+03D5)
 const PHI = '\u03D5';
@@ -151,18 +152,15 @@ export default function DesignGauges({ results }) {
     cOverD,
     ductile,
     transition,
-    layerResults,
-    cracking,
     demand,
+    minStrengthACI,
+    minBondedReinforcement,
   } = results;
 
-  // Extreme tension layer (deepest)
-  let extremeLayer = layerResults[0];
-  for (const lr of layerResults) {
-    if (lr.depth > extremeLayer.depth) extremeLayer = lr;
-  }
+  // Extreme tension reinforcement (deepest), bonded layer or unbonded tendon
+  const extremeLayer = extremeTension(results);
 
-  const epsilonTy = extremeLayer ? extremeLayer.steel.fpy / extremeLayer.steel.Es : 0.002;
+  const epsilonTy = results.epsilonTy ?? 0.002;
   const tensionLimit = epsilonTy + 0.003;
 
   // Steel stress utilization
@@ -177,8 +175,8 @@ export default function DesignGauges({ results }) {
     ? 'Transition Zone'
     : 'Compression-Controlled';
 
-  // 1.2Mcr check
-  const hasCracking = !!cracking;
+  // ACI 318-19 minimum strength (9.6.2.1 / 9.6.2.2)
+  const minBadge = minStrengthBadge(minStrengthACI, phiMnFt);
 
   // Strain gauge range — extend past actual value
   const strainMax = Math.max(epsilonT * 1.25, tensionLimit * 1.4, 0.01);
@@ -187,7 +185,10 @@ export default function DesignGauges({ results }) {
     <div className="design-gauges">
       {/* Hero value */}
       <div className="gauge-hero">
-        <div className="hero-label">{PHI}M<sub>n</sub> &mdash; Design Moment Strength</div>
+        <div className="hero-label">
+          {PHI}M<sub>n</sub> &mdash; Design Moment Strength
+          {results.direction === 'hog' && ' (hogging, top in tension)'}
+        </div>
         <div className="hero-value">{phiMnFt.toFixed(1)} <span className="hero-unit">kip-ft</span></div>
         <div className="hero-sub">{phiMn.toFixed(1)} kip-in &nbsp;|&nbsp; M<sub>n</sub> = {MnFt.toFixed(1)} kip-ft</div>
       </div>
@@ -267,15 +268,18 @@ export default function DesignGauges({ results }) {
           status={ductilityStatus}
           detail={ductilityLabel}
         />
-        {hasCracking && (
+        {minBadge && minBadge.tone !== 'na' && (
           <StatusBadge
-            label={`${PHI}M<sub>n</sub> &ge; 1.2 M<sub>cr</sub>`}
-            status={cracking.passesMinStrength ? 'pass' : 'fail'}
-            detail={
-              cracking.passesMinStrength
-                ? `${phiMnFt.toFixed(1)} \u2265 ${cracking.thresholdFt.toFixed(1)} kip-ft`
-                : `${phiMnFt.toFixed(1)} < ${cracking.thresholdFt.toFixed(1)} kip-ft`
-            }
+            label={`${PHI}M<sub>n</sub> &ge; 1.2 M<sub>cr</sub> (&sect;9.6.2.1)`}
+            status={minBadge.tone}
+            detail={minBadge.text}
+          />
+        )}
+        {minBondedReinforcement && (
+          <StatusBadge
+            label="A<sub>s,min</sub> = 0.004 A<sub>ct</sub> (&sect;9.6.2.3)"
+            status={minBondedReinforcement.pass ? 'pass' : 'fail'}
+            detail={`${minBondedReinforcement.AsProvided.toFixed(3)} ${minBondedReinforcement.pass ? '\u2265' : '<'} ${minBondedReinforcement.AsMin.toFixed(3)} in\u00B2`}
           />
         )}
       </div>

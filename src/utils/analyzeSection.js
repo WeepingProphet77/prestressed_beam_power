@@ -49,6 +49,12 @@ export function analyzeSection(section, layers, opts = {}) {
     ? analyzeWithUnbonded(f.section, f.layers, f.tendons, unbonded)
     : analyzeBeam(f.section, f.layers);
   annotateDirection(result, section, direction);
+  // analyzeBeam does not return the eps_ty it used; analyzeWithUnbonded does.
+  // Recover it the same way (deepest bonded layer) so displays never guess.
+  if (result.epsilonTy == null) {
+    const d = result.layerResults.reduce((m, r) => (!m || r.depth > m.depth ? r : m), null);
+    result.epsilonTy = d ? d.steel.fpy / d.steel.Es : 0.002;
+  }
   result.minStrengthACI = aciMinimumStrength(result, layers);
   // Service stresses are linear on the real (unflipped) gross section with
   // signed moments, so they are computed in the member frame for both signs.

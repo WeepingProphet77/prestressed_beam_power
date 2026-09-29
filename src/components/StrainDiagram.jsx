@@ -19,7 +19,14 @@ export default function StrainDiagram({ results }) {
   const gapStress = 40;
 
   const plotH = height - margin.top - margin.bottom;
-  const yScale = (depth) => margin.top + (depth / h) * plotH;
+  // Depths are from the compression face. Under hogging that is the member
+  // bottom, so flip them to draw the member the right way up.
+  const hog = results.direction === 'hog';
+  const yScale = (depth) => margin.top + ((hog ? h - depth : depth) / h) * plotH;
+  const aH = (a / h) * plotH;
+  const blockY = hog ? margin.top + plotH - aH : margin.top;
+  // Unbonded tendons are not strain-compatible, so they appear as forces only.
+  const tendonResults = results.tendonResults || [];
 
   // Strain diagram dimensions
   const strainLeft = margin.left + beamW + gapStrain;
@@ -63,9 +70,9 @@ export default function StrainDiagram({ results }) {
         {/* Stress block on beam */}
         <rect
           x={margin.left}
-          y={margin.top}
+          y={blockY}
           width={beamW}
-          height={(a / h) * plotH}
+          height={aH}
  data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color}
  data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
           strokeWidth="1"
@@ -95,6 +102,17 @@ export default function StrainDiagram({ results }) {
             strokeWidth="0.8"
           />
         ))}
+        {tendonResults.map((tr, i) => (
+          <circle
+            key={`t${i}`}
+            cx={margin.left + beamW / 2}
+            cy={yScale(tr.depth)}
+            r="3"
+            fill="none"
+            data-stroke-role="tensionSteel" stroke={roles.tensionSteel.color}
+            strokeWidth="1.2"
+          />
+        ))}
 
         {/* ─── Strain Diagram ─── */}
         <text x={strainLeft + strainW / 2} y={margin.top - 8} textAnchor="middle" className="diagram-title">
@@ -115,9 +133,9 @@ export default function StrainDiagram({ results }) {
         {/* Strain triangle */}
         <polygon
           points={`
-            ${zeroX + topStrain * strainScale},${margin.top}
+            ${zeroX + topStrain * strainScale},${yScale(0)}
             ${zeroX},${yScale(c)}
-            ${zeroX + botStrain * strainScale},${margin.top + plotH}
+            ${zeroX + botStrain * strainScale},${yScale(h)}
           `}
           data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color}
  data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
@@ -125,12 +143,12 @@ export default function StrainDiagram({ results }) {
         />
 
         {/* Strain value labels */}
-        <text x={zeroX + topStrain * strainScale - 4} y={margin.top - 2} textAnchor="end" className="strain-value">
+        <text x={zeroX + topStrain * strainScale - 4} y={hog ? margin.top + plotH + 14 : margin.top - 2} textAnchor="end" className="strain-value">
           {topStrain.toFixed(4)}
         </text>
         <text
           x={zeroX + botStrain * strainScale + 4}
-          y={margin.top + plotH + 14}
+          y={hog ? margin.top - 2 : margin.top + plotH + 14}
           textAnchor="start"
           className="strain-value"
         >
@@ -157,16 +175,16 @@ export default function StrainDiagram({ results }) {
         {/* Rectangular stress block */}
         <rect
           x={stressLeft}
-          y={margin.top}
+          y={blockY}
           width={stressW * 0.7}
-          height={(a / h) * plotH}
+          height={aH}
  data-fill-role="stressBlockFill" fill={roles.stressBlockFill.color}
  data-stroke-role="stressBlockStroke" stroke={roles.stressBlockStroke.color}
           strokeWidth="1.3"
         />
         <text
           x={stressLeft + stressW * 0.7 + 4}
-          y={margin.top + ((a / h) * plotH) / 2 + 4}
+          y={blockY + aH / 2 + 4}
           className="stress-label"
         >
           0.85f&#x2032;<tspan baselineShift="sub" fontSize="10">c</tspan>
@@ -192,8 +210,8 @@ export default function StrainDiagram({ results }) {
           </text>
         </g>
 
-        {/* Steel force arrows */}
-        {layerResults.map((lr, i) => {
+        {/* Steel force arrows (bonded layers, then unbonded tendons) */}
+        {[...layerResults, ...tendonResults].map((lr, i) => {
           const y = yScale(lr.depth);
           const isTension = lr.force > 0;
           return (

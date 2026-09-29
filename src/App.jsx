@@ -8,7 +8,8 @@ import DesignGauges from './components/DesignGauges';
 import ExportDialog from './components/ExportDialog';
 import InteractionDiagram from './components/InteractionDiagram';
 import BiaxialResults from './components/BiaxialResults';
-import { analyzeBeam, analyzeBiaxial, polygonProperties } from './utils/beamCalculations';
+import { polygonProperties } from './utils/beamCalculations';
+import { analyzeSection } from './utils/analyzeSection';
 import generatePdfReport from './utils/generatePdfReport';
 import { StyleAmbience } from './styles/StyleProvider';
 import StyleSelector from './styles/StyleSelector';
@@ -22,14 +23,15 @@ export default function App() {
   const [exporting, setExporting] = useState(false);
   const resultsRef = useRef(null);
 
-  const handleCalculate = (sec, layers, preError) => {
+  const handleCalculate = (sec, layers, preError, extras = {}) => {
     setError(null);
     try {
       if (preError) {
         throw new Error(preError);
       }
-      if (!layers.length) {
-        throw new Error('Add at least one steel reinforcement layer.');
+      const tendons = extras.tendons || [];
+      if (!layers.length && !tendons.length) {
+        throw new Error('Add at least one steel reinforcement layer or unbonded tendon.');
       }
       if (sec.sectionType === 'custom' || sec.sectionType === 'dxf') {
         if (!sec.points || sec.points.length < 3) {
@@ -63,14 +65,20 @@ export default function App() {
         }
       }
 
-      let res;
-      if (sec.bendingMode === 'biaxial') {
-        res = analyzeBiaxial(sec, layers, {
-          Mux: sec.Mux, Muy: sec.Muy, MxService: sec.MxService, MyService: sec.MyService,
-        });
-      } else {
-        res = analyzeBeam(sec, layers);
-        const totalSteel = res.layerResults.reduce((s, lr) => s + lr.force, 0);
+      for (let i = 0; i < tendons.length; i++) {
+        const t = tendons[i];
+        if (!(t.depth > 0 && t.depth < sec.h)) {
+          throw new Error(`Tendon U${i + 1}: depth must lie within the section (0 to ${sec.h} in).`);
+        }
+        if (!(t.area > 0)) {
+          throw new Error(`Tendon U${i + 1}: tendon area must be positive.`);
+        }
+      }
+
+      const res = analyzeSection(sec, layers, extras);
+      if (sec.bendingMode !== 'biaxial') {
+        const totalSteel = [...res.layerResults, ...(res.tendonResults || [])]
+          .reduce((s, lr) => s + lr.force, 0);
         const equilibriumError = Math.abs(res.Cc - totalSteel);
         if (!res.converged || equilibriumError > 0.1) {
           throw new Error(

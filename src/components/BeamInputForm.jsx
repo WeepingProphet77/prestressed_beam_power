@@ -12,7 +12,8 @@ const DEFAULT_SECTION = {
   h: 6,
   fc: 5,
   lambda: 1,   // lightweight-concrete factor λ (ACI 318-19 §19.2.4)
-  Mu: 0,       // factored moment demand Mu (kip-ft), uniaxial; enables 1.33Mu relief
+  Mu: 0,       // factored moment demand |Mu| (kip-ft), uniaxial; signed by `direction`
+  direction: 'sag', // uniaxial: 'sag' (bottom in tension) | 'hog' (top in tension)
   // Sandwich shape parameters
   bt: 16,  // top rectangle width
   ht: 8,   // top rectangle height
@@ -47,10 +48,32 @@ const DEFAULT_LAYER = {
   fse: 170,
 };
 
+const DEFAULT_TENDON = {
+  steelPresetId: 'grade270',
+  area: 0.153,
+  depth: 3,
+  fse: 170,
+};
+
+const DEFAULT_UNBONDED = {
+  method: 'aci',       // 'aci' | 'aashto' | 'user'
+  spanFt: 25,          // aci: span for l/h
+  bComp: '',           // optional override of the compression-face width for rho_p
+  tendonLengthFt: 40,  // aashto: anchor-to-anchor length
+  supportHinges: 0,    // aashto: Ns
+  fps: 200,            // user: fps, ksi
+};
+
+const DEFAULT_SERVICE = { enabled: false, MaFt: 0, MsusFt: '', twoWaySlab: false };
+
 export default function BeamInputForm({ onCalculate }) {
   const [section, setSection] = useState(DEFAULT_SECTION);
   const [layers, setLayers] = useState([{ ...DEFAULT_LAYER, id: 1 }]);
   const [nextId, setNextId] = useState(2);
+  const [tendons, setTendons] = useState([]);
+  const [nextTendonId, setNextTendonId] = useState(1);
+  const [unbonded, setUnbonded] = useState(DEFAULT_UNBONDED);
+  const [service, setService] = useState(DEFAULT_SERVICE);
 
   const handleSectionChange = (field, value) => {
     const updated = { ...section, [field]: value };
@@ -193,6 +216,63 @@ export default function BeamInputForm({ onCalculate }) {
     setLayers((prev) => prev.filter((l) => l.id !== id));
   };
 
+  const handleTendonChange = (id, field, value) => {
+    setTendons((prev) => prev.map((t) => {
+      if (t.id !== id) return t;
+      const updated = { ...t, [field]: value };
+      if (field === 'steelPresetId') {
+        const preset = steelPresets.find((p) => p.id === value);
+        if (preset) updated.fse = preset.defaultFse;
+      }
+      return updated;
+    }));
+  };
+
+  const addTendon = () => {
+    setTendons((prev) => [...prev, { ...DEFAULT_TENDON, id: nextTendonId }]);
+    setNextTendonId((n) => n + 1);
+  };
+
+  const removeTendon = (id) => {
+    setTendons((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Hogging, unbonded tendons and service stresses are uniaxial only.
+  const isUniaxial = section.bendingMode !== 'biaxial';
+  const hog = isUniaxial && section.direction === 'hog';
+  const sign = hog ? -1 : 1;
+
+  const buildExtras = () => {
+    if (!isUniaxial) return {};
+    const num = (v) => parseFloat(v);
+    const extras = { direction: hog ? 'hog' : 'sag' };
+    if (tendons.length) {
+      extras.tendons = tendons.map((t) => {
+        const preset = steelPresets.find((p) => p.id === t.steelPresetId);
+        return { area: num(t.area), depth: num(t.depth), fse: num(t.fse) || 0, steel: preset, name: preset.name };
+      });
+      const u = { method: unbonded.method };
+      if (unbonded.method === 'aci') u.spanFt = num(unbonded.spanFt);
+      if (unbonded.method === 'aashto') {
+        u.tendonLengthFt = num(unbonded.tendonLengthFt);
+        u.supportHinges = parseInt(unbonded.supportHinges, 10) || 0;
+      }
+      if (unbonded.method === 'user') u.fps = num(unbonded.fps);
+      if (num(unbonded.bComp) > 0) u.bComp = num(unbonded.bComp);
+      extras.unbonded = u;
+    }
+    if (service.enabled) {
+      // Entered as magnitudes and applied in the selected direction
+      // (+ = bottom fiber in tension, the member-frame convention).
+      extras.service = {
+        MaFt: sign * Math.abs(num(service.MaFt) || 0),
+        MsusFt: service.MsusFt === '' ? undefined : sign * Math.abs(num(service.MsusFt) || 0),
+        twoWaySlab: !!service.twoWaySlab,
+      };
+    }
+    return extras;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -213,7 +293,7 @@ export default function BeamInputForm({ onCalculate }) {
         fc: parseFloat(section.fc),
         ...biaxialFields(),
       };
-      onCalculate(finalSection, buildLayers());
+      onCalculate(finalSection, buildLayers(), null, buildExtras());
       return;
     }
 
@@ -240,14 +320,15 @@ export default function BeamInputForm({ onCalculate }) {
       voidCenterDepth: parseFloat(section.voidCenterDepth) || parseFloat(section.h) / 2,
       ...biaxialFields(),
     };
-    onCalculate(finalSection, buildLayers());
+    onCalculate(finalSection, buildLayers(), null, buildExtras());
   };
 
   // Shared helpers for both section paths.
   const biaxialFields = () => ({
     bendingMode: section.bendingMode || 'uniaxial',
     lambda: parseFloat(section.lambda) || 1,
-    Mu: parseFloat(section.Mu) || 0,
+    // |Mu| is entered; the engine takes it signed (+ sag, - hog).
+    Mu: isUniaxial ? sign * Math.abs(parseFloat(section.Mu) || 0) : 0,
     Mux: parseFloat(section.Mux) || 0,
     Muy: parseFloat(section.Muy) || 0,
     MxService: parseFloat(section.MxService) || 0,
@@ -310,6 +391,29 @@ export default function BeamInputForm({ onCalculate }) {
             </select>
           </label>
         </div>
+
+        {isUniaxial && (
+          <div className="form-row">
+            <label>
+              <span className="label-text">Moment Direction</span>
+              <select
+                value={section.direction}
+                onChange={(e) => handleSectionChange('direction', e.target.value)}
+              >
+                <option value="sag">Sagging, +M (bottom in tension)</option>
+                <option value="hog">Hogging, &minus;M (top in tension)</option>
+              </select>
+            </label>
+          </div>
+        )}
+
+        {hog && (
+          <div className="biaxial-note">
+            Hogging: the section is analyzed with the compression face at the
+            bottom. Keep entering every depth from the member top, as drawn;
+            M<sub>cr</sub> is the top-fiber cracking moment.
+          </div>
+        )}
 
         {section.bendingMode === 'biaxial' && (
           <div className="biaxial-note">
@@ -588,7 +692,7 @@ export default function BeamInputForm({ onCalculate }) {
           </label>
           {section.bendingMode !== 'biaxial' && (
             <label>
-              <span className="label-text">M<sub>u</sub> (factored, kip-ft)</span>
+              <span className="label-text">|M<sub>u</sub>| (factored, kip-ft)</span>
               <input
                 type="number"
                 step="1"
@@ -596,7 +700,7 @@ export default function BeamInputForm({ onCalculate }) {
                 value={section.Mu}
                 onChange={(e) => handleSectionChange('Mu', e.target.value)}
               />
-              <span className="field-note">Optional — enables 1.33M<sub>u</sub> check &amp; utilization</span>
+              <span className="field-note">Optional — enables utilization &amp; the &sect;9.6.2.2 2M<sub>u</sub> waiver check</span>
             </label>
           )}
         </div>
@@ -615,7 +719,7 @@ export default function BeamInputForm({ onCalculate }) {
         </h3>
 
         <div className="layers-info">
-          Depth is measured from the extreme compression fiber.
+          Depth is measured from the member top, as drawn, in either moment direction.
           {section.bendingMode === 'biaxial' && ' A lower-left (x, y) readout is shown beneath each layer for reference.'}
           {' '}For prestressing steel, enter the effective prestress <span style={{whiteSpace: 'nowrap'}}>(f<sub>se</sub>)</span> after all losses.
         </div>
@@ -628,7 +732,7 @@ export default function BeamInputForm({ onCalculate }) {
             <div key={layer.id} className="steel-layer-card">
               <div className="layer-header">
                 <span className="layer-number">Layer {idx + 1}</span>
-                {layers.length > 1 && (
+                {(layers.length > 1 || tendons.length > 0) && (
                   <button
                     type="button"
                     className="btn-remove"
@@ -742,6 +846,169 @@ export default function BeamInputForm({ onCalculate }) {
           + Add Steel Layer
         </button>
       </div>
+
+      {isUniaxial && (
+        <div className="form-section">
+          <h3>
+            <span className="section-icon">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" strokeDasharray="2 2"/>
+                <circle cx="7" cy="7" r="2" fill="currentColor"/>
+              </svg>
+            </span>
+            Unbonded Tendons
+          </h3>
+          <div className="layers-info">
+            Optional. Unbonded post-tensioning at this section, depth from the member
+            top. f<sub>ps</sub> is a member-level stress, so the tendon enters the
+            solve as a force A<sub>ps</sub>f<sub>ps</sub> rather than by strain compatibility.
+          </div>
+
+          {tendons.map((t, idx) => (
+            <div key={t.id} className="steel-layer-card">
+              <div className="layer-header">
+                <span className="layer-number">Tendon U{idx + 1}</span>
+                <button type="button" className="btn-remove" onClick={() => removeTendon(t.id)} title="Remove tendon">
+                  &times;
+                </button>
+              </div>
+              <div className="form-row">
+                <label>
+                  <span className="label-text">Steel Type</span>
+                  <select value={t.steelPresetId} onChange={(e) => handleTendonChange(t.id, 'steelPresetId', e.target.value)}>
+                    {steelPresets
+                      .filter((p) => p.category === 'prestressing')
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="label-text">A<sub>ps</sub> (in&sup2;)</span>
+                  <input type="number" step="any" min="0.0001" value={t.area}
+                    onChange={(e) => handleTendonChange(t.id, 'area', e.target.value)} />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  <span className="label-text">Depth, d (in)</span>
+                  <input type="number" step="any" min="0.0001" value={t.depth}
+                    onChange={(e) => handleTendonChange(t.id, 'depth', e.target.value)} />
+                </label>
+                <label>
+                  <span className="label-text">f<sub>se</sub> (ksi)</span>
+                  <input type="number" step="1" min="0" value={t.fse}
+                    onChange={(e) => handleTendonChange(t.id, 'fse', e.target.value)} />
+                </label>
+              </div>
+            </div>
+          ))}
+
+          {tendons.length > 0 && (
+            <>
+              <div className="form-row">
+                <label>
+                  <span className="label-text">f<sub>ps</sub> Method</span>
+                  <select value={unbonded.method} onChange={(e) => setUnbonded({ ...unbonded, method: e.target.value })}>
+                    <option value="aci">ACI 318-19 Table 20.3.2.4.1</option>
+                    <option value="aashto">AASHTO LRFD 5.6.3.1.2</option>
+                    <option value="user">Engineer-supplied fps</option>
+                  </select>
+                </label>
+                {unbonded.method === 'aci' && (
+                  <label>
+                    <span className="label-text">Span, &#8467; (ft)</span>
+                    <input type="number" step="any" min="0" value={unbonded.spanFt}
+                      onChange={(e) => setUnbonded({ ...unbonded, spanFt: e.target.value })} />
+                    <span className="field-note">Sets the &#8467;/h row (&le; 35 or &gt; 35)</span>
+                  </label>
+                )}
+                {unbonded.method === 'user' && (
+                  <label>
+                    <span className="label-text">f<sub>ps</sub> (ksi)</span>
+                    <input type="number" step="any" min="0" value={unbonded.fps}
+                      onChange={(e) => setUnbonded({ ...unbonded, fps: e.target.value })} />
+                    <span className="field-note">From a detailed member analysis; capped at f<sub>py</sub></span>
+                  </label>
+                )}
+              </div>
+              {unbonded.method === 'aashto' && (
+                <div className="form-row">
+                  <label>
+                    <span className="label-text">Tendon length, &#8467;<sub>i</sub> (ft)</span>
+                    <input type="number" step="any" min="0" value={unbonded.tendonLengthFt}
+                      onChange={(e) => setUnbonded({ ...unbonded, tendonLengthFt: e.target.value })} />
+                  </label>
+                  <label>
+                    <span className="label-text">Support hinges, N<sub>s</sub></span>
+                    <input type="number" step="1" min="0" value={unbonded.supportHinges}
+                      onChange={(e) => setUnbonded({ ...unbonded, supportHinges: e.target.value })} />
+                  </label>
+                </div>
+              )}
+              <div className="form-row">
+                <label>
+                  <span className="label-text">Compression Width, b (in)</span>
+                  <input type="number" step="any" min="0" value={unbonded.bComp} placeholder="auto"
+                    onChange={(e) => setUnbonded({ ...unbonded, bComp: e.target.value })} />
+                  <span className="field-note">Optional; used for the reinforcement ratio. Defaults to the compression-face width</span>
+                </label>
+              </div>
+            </>
+          )}
+
+          <button type="button" className="btn-add-layer" onClick={addTendon}>
+            + Add Unbonded Tendon
+          </button>
+        </div>
+      )}
+
+      {isUniaxial && (
+        <div className="form-section">
+          <h3>
+            <span className="section-icon">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 10h12M3 10V5M7 10V2M11 10V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </span>
+            Service Stresses
+          </h3>
+          <div className="form-row">
+            <label className="checkbox-label">
+              <input type="checkbox" checked={service.enabled}
+                onChange={(e) => setService({ ...service, enabled: e.target.checked })} />
+              <span className="label-text">Check service stresses (ACI 318-19 &sect;24.5)</span>
+            </label>
+          </div>
+          {service.enabled && (
+            <>
+              <div className="layers-info">
+                Uncracked gross section with bonded and unbonded effective prestress.
+                Moments are magnitudes applied in the moment direction above. Units: kip-ft.
+              </div>
+              <div className="form-row">
+                <label>
+                  <span className="label-text">M<sub>a</sub> (total service)</span>
+                  <input type="number" step="any" min="0" value={service.MaFt}
+                    onChange={(e) => setService({ ...service, MaFt: e.target.value })} />
+                </label>
+                <label>
+                  <span className="label-text">M<sub>sus</sub> (sustained)</span>
+                  <input type="number" step="any" min="0" value={service.MsusFt} placeholder="optional"
+                    onChange={(e) => setService({ ...service, MsusFt: e.target.value })} />
+                </label>
+              </div>
+              <div className="form-row">
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={service.twoWaySlab}
+                    onChange={(e) => setService({ ...service, twoWaySlab: e.target.checked })} />
+                  <span className="label-text">Two-way slab (Class U at 6&radic;f&#x2032;c)</span>
+                </label>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {section.bendingMode === 'biaxial' && (
         <div className="form-section">

@@ -162,7 +162,7 @@ export function aciMinimumStrength(result, layers) {
       applies: false,
       status: 'not-applicable',
       note: hasUnbonded
-        ? '9.6.2.1 (1.2Mcr) applies only with bonded prestressed reinforcement. Minimum bonded reinforcement is 9.6.2.3, As,min = 0.004 Act; see minBondedReinforcement.'
+        ? '9.6.2.1 (1.2Mcr) applies only with bonded prestressed reinforcement. Minimum bonded reinforcement is 9.6.2.3, As,min = 0.004 Act, checked with the unbonded tendons.'
         : 'Nonprestressed member: the ACI 318-19 minimum is As,min per 9.6.1.2 (beams; 7.6.1.1 for one-way slabs), waived by 9.6.1.3 where As provided >= 4/3 As required. Not checked here. The engine\'s 1.2Mcr comparison is informational only and is not the ACI provision.',
     };
   }
