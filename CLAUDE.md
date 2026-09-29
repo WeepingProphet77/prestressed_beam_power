@@ -22,6 +22,12 @@ CI (`.github/workflows/deploy.yml`) runs **only on push to `main`** and only doe
 requests** — an empty checks list on a PR is expected, not a failure. Tests and
 lint are not in CI, so run them locally before pushing.
 
+**The power-formula skill is maintained separately.** Until #45 this repo carried
+a copy under `skills/`; it no longer does. The skill's engine is the methodology
+reference: when it changes, port the change here by hand and re-run the tests
+(`steelPresets.test.js` checks the steel table against the published design aid,
+`analyzeSection.test.js` carries the skill's worked examples).
+
 ## Architecture
 
 ```
@@ -53,7 +59,8 @@ Four token scales, each defined per style with its own multiplier: **color**
 ### Invariants
 
 **The calculation engine is not a styling surface.** `src/utils/beamCalculations.js`,
-`src/data/`, and `skills/` must not change for UI work. When a task is described as
+`src/utils/direction.js`, `src/utils/unbonded.js`, `src/utils/analyzeSection.js`
+and `src/data/` must not change for UI work. When a task is described as
 visual, the diff for those paths should be empty.
 
 **SVG cannot read CSS custom properties.** SVG presentation attributes (`fill`,
